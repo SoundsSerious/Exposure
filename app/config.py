@@ -2,7 +2,8 @@
 import os
 from sqlalchemy_imageattach.stores.fs import FileSystemStore
 from kivy import resources
-
+import random
+from glob import glob
 import sys
 sys.path.append('../')
 
@@ -79,3 +80,26 @@ but_opt = dict(color_normal=(1,1,1,1),color_down=BUTTONDOWN,\
 
 
 resources.resource_add_path(os.path.join(APP_PATH,'resources'))
+
+
+#Mock Data
+LAT,LONG = 26.7153, -80.053
+
+PRJ_DIR = os.path.join( EXP_PATH, 'project_images')
+PRJ_IMAGE = glob(PRJ_DIR+'/*.jpg')
+PROJECTS = [os.path.basename(prj).replace('.jpg','').replace('.',' ') \
+                                    for prj in PRJ_IMAGE]
+PRJ_LOC = [(LONG+(random.random()-0.5)*0.1,LONG+(random.random()-0.5)*0.1)for prj in PROJECTS]  
+             
+USR_DIR = os.path.join( EXP_PATH, 'user_images')
+USR_IMAGE = glob(USR_DIR+'/*.jpg')
+USERS = [os.path.basename(prj).replace('.jpg','').replace('.',' ') \
+                                    for prj in USR_IMAGE]
+N = len(USERS)
+USR_LOC = [(LAT+(random.random()-0.5)*0.1,LONG+(random.random()-0.5)*0.1) for prj in USERS]
+
+PRJ_MEMBERS = {prj: set([random.choice(USERS) for i in range(random.randint(1,N-3))]) \
+                                              for prj in PROJECTS}
+                                                  
+def hello(self):
+    print 'press my buttons baby'                                                  

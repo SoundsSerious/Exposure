@@ -34,7 +34,7 @@ class CameraView(Camera):
 
     def __init__(self,**kwargs):
         super(CameraView,self).__init__(**kwargs)
-        self.play = True
+        self.play = False
 
 
 class ShutterButton(Button):

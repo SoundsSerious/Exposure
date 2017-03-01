@@ -396,7 +396,8 @@ class ColorDownButton(Button):
         self.background_color = self.background_color_normal
 
     def update_rect(self,*args):
-        print self.size, self.background_color
+        #print self.size, self.background_color
+        pass
 
 class RoundedButton(ColorDownButton):
     '''In which we make a damn button with rounded corners'''
@@ -613,7 +614,8 @@ class Icon(ButtonBehavior,SquareExpandingImage):
         self.bind( size = self.update_rect)
         
     def update_rect(self,*args):
-        print self.size, self.min_side
+        #print self.size, self.min_side
+        pass
 
 
   

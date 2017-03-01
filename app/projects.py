@@ -31,29 +31,11 @@ from style import *
 
 LORN_IPSUM = '''Lorem ipsum dolor sit amet, ut altera adipiscing reformidans his. Ut suas clita epicuri eos. Justo verterem eu pri, autem iudicabit in mea. Id vel alienum fabellas definitionem, ex usu putant corpora copiosae, nam aliquip posidonium no.'''*9
 
-LAT,LONG = 26.7153, -80.053
-
-PRJ_DIR = os.path.join( EXP_PATH, 'project_images')
-PRJ_IMAGE = glob(PRJ_DIR+'/*.jpg')
-PROJECTS = [os.path.basename(prj).replace('.jpg','').replace('.',' ') \
-                                    for prj in PRJ_IMAGE]
-PRJ_LOC = [(LONG+(random.random()-0.5)*0.1,LONG+(random.random()-0.5)*0.1)for prj in PROJECTS]  
-             
-USR_DIR = os.path.join( EXP_PATH, 'user_images')
-USR_IMAGE = glob(USR_DIR+'/*.jpg')
-USERS = [os.path.basename(prj).replace('.jpg','').replace('.',' ') \
-                                    for prj in USR_IMAGE]
-N = len(USERS)
-USR_LOC = [(LAT+(random.random()-0.5)*0.1,LONG+(random.random()-0.5)*0.1) for prj in USERS]
-
-PRJ_MEMBERS = {prj: set([random.choice(USERS) for i in range(random.randint(1,N-3))]) \
-                                              for prj in PROJECTS}
-
 
 Builder.load_string('''
 #:import os os
 
-<-FeatureListEntry@BoxLayout>:
+<-ProjectListEntry@BoxLayout>:
     orientation: "horizontal"
     size_hint_y: None
     height: 100
@@ -251,7 +233,7 @@ Builder.load_string('''
             size: min(self.size)-2,min(self.size)-2
         StencilPop
         
-<FeatureListView>:
+<ProjectListView>:
     background_color: [1,1,1,1]
     size_hint: 1,1
     shadow_frac: 0.05
@@ -269,25 +251,6 @@ Builder.load_string('''
             source:os.path.join('resources','vert_trans.png')
             size: self.width, self.height*self.shadow_frac
             pos: self.x,self.y+self.height*(1-self.shadow_frac)
-<UserListView>:
-    background_color: [1,1,1,1]
-    size_hint: 1,1
-    shadow_frac: 0.05
-    canvas:
-        Color:
-            rgba: 0.7,0.7,0.7,1
-        Rectangle:
-            source: os.path.join('resources','background.jpg')
-            size: self.size
-            pos: self.pos
-
-    canvas.after:
-        Color:
-            rgba: 1,1,1,1
-        Rectangle:
-            source: os.path.join('resources','vert_trans.png')
-            size: self.width, self.height*self.shadow_frac
-            pos: self.x,self.y+self.height*(1-self.shadow_frac)
             '''
 )
 
@@ -299,41 +262,24 @@ class ProjectData(NetworkData):
 
     user_dict = ObjectProperty(None)
     images = ListProperty(None)
-    info = StringProperty(None)
-    name = StringProperty(None)
+    info = StringProperty('')
+    name = StringProperty('')
     location = ListProperty(None)
 
     def on_primary_key(self,inst,val):
         app = App.get_running_app()
-        self.d = app.social_client.perspective.callRemote('get_user_info',self.primary_key)
-        self.d.addCallback(self.createFromJson)
-        self.d.addCallback(self.initialize)
+        self.d = app.social_client.perspective.callRemote('get_project_info',self.primary_key)
+        self.d.addCallbacks(self.createFromJson, self.catchError)
         return self.d
 
     def createFromJson(self,user_json):
-        self.user_dict = json.loads(user_json)
-        self.images = self.user_dict['images']
-        self.info = self.user_dict['info']
-        self.name = self.user_dict['name']
-        self.location = self.user_dict['location']
-  
-##Mock Data  
-#class ProjectData(NetworkData):
-#    '''Profile Loading Functionality'''
-#
-#    user_dict = ObjectProperty(None)
-#    images = ListProperty(None)
-#    info = StringProperty(None)
-#    name = StringProperty(None)
-#    location = ListProperty(None)
-#
-#    def on_primary_key(self,inst,val):
-#        self.name = PROJECTS[ self.primary_key ]
-#        self.location = PRJ_LOC[ self.primary_key ]        
-#        self.images = [PRJ_IMAGE[ self.primary_key ]]
-#        self.info = LORN_IPSUM
-#        self.initialize()
-        
+        if user_json:
+            self.user_dict = json.loads(user_json)
+            self.images = self.user_dict['images']
+            self.info = self.user_dict['info']
+            self.name = self.user_dict['name']
+            self.location = self.user_dict['location']
+            self.initialize()
     
 class ProjectMapIcon(AsyncMapMarker,ProjectData):
 
@@ -360,7 +306,7 @@ class PublicMapView(DragBehavior,Widget,ProjectData):
     
     def __init__(self,project_id,**kwargs):
         super(PublicMapView,self).__init__(**kwargs)
-        ProjectData.__init__(self,primary_key=project_id)
+        self.primary_key = project_id
         self.ids['layout'].bind(minimum_height=self.ids['layout'].setter('height'))
         
     
@@ -405,14 +351,14 @@ class DetailedPublicView(Widget,ProjectData):
     def on_body_text(self,*args):
         self.ids['body'].text = self.body_text             
 
-class FeatureListEntry(ButtonBehavior,BoxLayout,ProjectData):
+class ProjectListEntry(ButtonBehavior,BoxLayout,ProjectData):
     
     title_text = StringProperty('')
     img_source = StringProperty('')
-    body_text = StringProperty(LORN_IPSUM)
+    body_text = StringProperty('')
 
     def __init__(self,project_id,**kwargs):
-        super(FeatureListEntry,self).__init__(**kwargs)
+        super(ProjectListEntry,self).__init__(**kwargs)
         self.primary_key = project_id
 
     def add_button_icon(self,iconImage,callback,width=25):
@@ -422,7 +368,6 @@ class FeatureListEntry(ButtonBehavior,BoxLayout,ProjectData):
         self.ids['button_bar'].width = width+5
         
     def initialize(self,**kwargs):
-        print 'initalize'
         self.img_source = self.images[-1]
         self.title_text = self.name
         self.body_text = self.info
@@ -438,44 +383,17 @@ class FeatureListEntry(ButtonBehavior,BoxLayout,ProjectData):
         self.ids['body'].text = self.body_text         
         
 
-def hello(self):
-    print 'hello'
-
-
-
-class FeatureListView(Widget):
+class ProjectListView(Widget):
 
     def __init__(self,**kwargs):
-        super(FeatureListView,self).__init__(**kwargs)
+        super(ProjectListView,self).__init__(**kwargs)
         self.layout = GridLayout(cols=1, spacing=3, size_hint_y=None)
         self.layout.bind(minimum_height=self.layout.setter('height'))
 
 
         for i,prj in enumerate(PROJECTS):
-            pw = FeatureListEntry(i)
+            pw = ProjectListEntry(i+1)
             pw.add_button_icon(ADDUSER_ICON,hello)
-            self.layout.add_widget(pw)
-
-        self.scroll = ScrollView(size_hint=(1, None))
-        self.scroll.add_widget(self.layout)
-        self.add_widget(self.scroll)
-
-        self.bind(size=self.update_rect)
-
-    def update_rect(self,*args):
-        self.scroll.size = self.size
-
-class UserListView(Widget):
-
-    def __init__(self,**kwargs):
-        super(UserListView,self).__init__(**kwargs)
-        self.layout = GridLayout(cols=1, spacing=3, size_hint_y=None)
-        self.layout.bind(minimum_height=self.layout.setter('height'))
-
-
-        for i,prj in enumerate(USERS[0:2]):
-            pw = FeatureListEntry(i)
-            pw.add_button_icon(RACK_ICON,hello)
             self.layout.add_widget(pw)
 
         self.scroll = ScrollView(size_hint=(1, None))

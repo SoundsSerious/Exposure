@@ -62,8 +62,8 @@ class Social_Interface(Avatar):
 
     def perspective_user_id(self):
         print 'perspective id'
-        print self.user, self._user_id
-        if self._user_id:
+        print self.user, self.user_id
+        if self.user_id:
             print 'getting user id {}'.format(self._user_id)
             return self._user_id
         raise SocialException("No User Object")
@@ -88,10 +88,13 @@ class Social_Interface(Avatar):
 
     def perspective_get_user_info(self,user_id):
         print 'getting user info {}'.format(user_id)
-        if self.user:
-            d = defer.maybeDeferred(self.db_get_user_info, user_id)
-            return d
-        raise SocialException("No User Object")
+        d = defer.maybeDeferred(self.db_get_user_info, user_id=user_id)
+        return d
+        
+    def perspective_get_project_info(self,project_id):
+        print 'getting project info {}'.format(project_id)
+        d = defer.maybeDeferred(self.db_get_project_info, project_id=project_id)
+        return d    
 
     ###################Data Base Methods###################
     #There's an issue with wrapping deferreds so don't nest one sqlalchemy_method
@@ -99,18 +102,29 @@ class Social_Interface(Avatar):
 
     @ITwistedData.sqlalchemy_method
     def db_get_user_info(self, session, user_id):
-        '''Get Local Users Via GEO information'''
-        user = session.query(User).filter(User.id == user_id).first()
+        '''Get User Info By Primary Key'''
+        user = session.query(User).get(user_id)        
         if user:
+            print self.user_id, user_id, self.friends
             json = user.user_json
+            return json           
+        else:
+            raise SocialException("No User Object {}".format(user_id))
+            
+    @ITwistedData.sqlalchemy_method
+    def db_get_project_info(self, session, project_id):
+        '''Get Project Info By Primary Key'''
+        project = session.query(Project).get(project_id)
+        if project:
+            json = project.project_json
             return json
         else:
-            raise SocialException("No User Object")
+            raise SocialException("No Project Object {}".format(project_id))            
 
     @ITwistedData.sqlalchemy_method
     def db_assignSelfFromDatabase(self,session, userEmail):
         print 'assign from email {}'.format(userEmail)
-        user = session.query(User).filter(User.email == userEmail).first()
+        user = session.query(User).filter(User.email == userEmail)
         print 'got selfuser {}'.format(user)
         if user:
             self._user_id = user.id
@@ -130,14 +144,14 @@ class Social_Interface(Avatar):
     @ITwistedData.sqlalchemy_method
     def db_get_friends_ids(self, session):
         '''Get Local Users Via GEO information'''
-        user = session.query(User).filter(User.id == self.user.id).first()
+        user = session.query(User).get(self.user.id)
         friends = user.all_friends
         return list([friend.id for friend in friends])
 
     @ITwistedData.sqlalchemy_method
     def db_get_nearby(self,session, miles = 100):
         print 'getting nearby from {}'.format(self.user)
-        user = session.query(User).filter(User.id == self.user.id).first()
+        user = session.query(User).get(self.user.id)
         if user:
             loc = user.current_location
             if loc:
@@ -162,7 +176,7 @@ class Social_Interface(Avatar):
     #Common Interface... seems like this might be irrelevant due to PBroker
 
     @property
-    def db_id(self):
+    def user_id(self):
         return self._user_id
 
     @property

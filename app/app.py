@@ -74,7 +74,7 @@ class ExposureHomeWidget(SocialHomeWidget):
             elif screen == 'messages':
                 self.profile.addMenuScreenWidget(screen,UserListView(),**but_opt)
             else:
-                self.profile.addMenuScreenWidget(screen,FeatureListView(),**but_opt)
+                self.profile.addMenuScreenWidget(screen,ProjectListView(),**but_opt)
 
         self.projects = MenuBar(self)
         for screen in ('map','nearby','your projects','make'):
@@ -87,10 +87,10 @@ class ExposureHomeWidget(SocialHomeWidget):
                     if _screen in ('crew list','crew chat','auditioins'):
                         project_view.addMenuScreenWidget(_screen,UserListView())
                     else:
-                        project_view.addMenuScreenWidget(_screen,FeatureListView())
+                        project_view.addMenuScreenWidget(_screen,ProjectListView())
                 self.projects.addMenuScreenWidget(screen,project_view,**but_opt)
             else:
-                self.projects.addMenuScreenWidget(screen,FeatureListView(),**but_opt)
+                self.projects.addMenuScreenWidget(screen,ProjectListView(),**but_opt)
 
         self.casting = MenuBar(self)
         for screen in ('map','nearby','your roles','make'):
@@ -98,14 +98,14 @@ class ExposureHomeWidget(SocialHomeWidget):
             if screen == 'map':
                 self.casting.addMenuScreenWidget(screen,MapWidget(self),**but_opt)
             elif screen == 'nearby':
-                self.casting.addMenuScreenWidget(screen,FeatureListView(),**but_opt)
+                self.casting.addMenuScreenWidget(screen,ProjectListView(),**but_opt)
             elif screen == 'your roles':
                 role_view = MenuTabSlider(self,size_hint=(1,1))
                 for _screen in ('overview','canidates','applicants','invite'):
                     if _screen in ('canidates','applicants'):
                         role_view.addMenuScreenWidget(_screen, UserListView())
                     else:
-                        role_view.addMenuScreenWidget(_screen,FeatureListView())
+                        role_view.addMenuScreenWidget(_screen,ProjectListView())
                 self.casting.addMenuScreenWidget(screen,role_view,**but_opt)
             else:
                 self.casting.addMenuScreenWidget(screen,UserListView(),**but_opt)
@@ -117,7 +117,7 @@ class ExposureHomeWidget(SocialHomeWidget):
         self.addMenuScreenWidget('casting',CircularIcon(source=CASTING_ICON,**icon_opt)\
                                                     ,self.casting,**font_opts)
         self.addMenuScreenWidget('camera',CircularIcon(source=CAMERA_ICON,**icon_opt)\
-                                                    ,Widget(),**font_opts)
+                                                    ,CameraWidget(),**font_opts)
         self.addMenuScreenWidget('',RoundedButton(text='logout',**but_opt),Widget())
 
 

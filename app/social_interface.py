@@ -46,7 +46,11 @@ class NetworkData:
     
     def initialize(self,*args):
         '''We setup the kivy object here'''
+        print 'network init'
         pass
+    
+    def catchError(self,failure):
+        print 'ERROR:',self,str(failure)
     
 class EditableNetworkData(NetworkData):
     '''Interface to Receive and Edit Data From A Server'''
@@ -94,6 +98,7 @@ class SocialApp(App):
         self.update_client( deffered = d )
 
     def connectToServer(self):
+        print 'Connecting To {}:{}'.format(self.host,self.port)
         reactor.connectTCP(self.host, self.port, Social_ClientFactory(self))
 
     def get_user_id(self):

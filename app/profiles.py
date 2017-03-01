@@ -25,7 +25,110 @@ from social_interface import *
 
 path = EXP_PATH
 
-class ProfileData(object):
+Builder.load_string("""
+
+<UserListView>:
+    background_color: [1,1,1,1]
+    size_hint: 1,1
+    shadow_frac: 0.05
+    canvas:
+        Color:
+            rgba: 0.7,0.7,0.7,1
+        Rectangle:
+            source: os.path.join('resources','background.jpg')
+            size: self.size
+            pos: self.pos
+
+    canvas.after:
+        Color:
+            rgba: 1,1,1,1
+        Rectangle:
+            source: os.path.join('resources','vert_trans.png')
+            size: self.width, self.height*self.shadow_frac
+            pos: self.x,self.y+self.height*(1-self.shadow_frac)
+
+<-UserListEntry@BoxLayout>:
+    orientation: "horizontal"
+    size_hint_y: None
+    height: 100
+    canvas:
+        Color:
+            rgba: 1,1,1,1
+        Rectangle:
+            size: self.size
+            pos: self.pos
+        Color:
+            rgba: 0,0,0,1
+        Line:
+            points: self.x,1,self.x,self.x+self.width,1
+            width: 1
+        Line:
+            points: self.x,self.height,self.x,self.x+self.width,self.height
+            width: 1
+
+    SquareExpandingWebImage:
+        id: image
+        source: root.img_source
+        size_hint: (None,0.95)
+        pos_hint: {'center_x':0.5,'center_y':0.5}
+        width: 100
+    BoxLayout:
+        orientation: 'vertical'
+        size_hint_x: 0.8
+        height: 30
+        Label:
+            color: 0,0,0,1
+            font_size: 20
+            font_name: 'fonts/Monument_Valley_1.2-Regular.otf'
+            id: title
+            text: root.title_text.upper()
+            size_hint_y: 0.25
+        Label:
+            id: body
+            color: 0,0,0,1
+            text: root.body_text
+            size_hint_y:0.9
+            font_size: 10
+            text_size: (self.width * 0.75, self.height)
+            halign: 'left'
+            valign: 'top'
+            font_name: 'fonts/Quicksand-Regular.otf'
+    BoxLayout:
+        orientation:'vertical'
+        id: button_bar
+        width: 25
+        size_hint_x: None
+
+
+<-ProfileMapIcon>:
+    size_hint: None, None
+    source: root.source
+    size: [20,20]
+    allow_stretch: True
+
+    canvas:
+        Color:
+            rgb: 1,1,1
+        Ellipse:
+            pos: self.pos
+            size: min(self.size),min(self.size)
+        StencilPush
+        Ellipse:
+            pos: self.pos[0]+1,self.pos[1]+1,
+            size: min(self.size)-2,min(self.size)-2
+        StencilUse
+        Rectangle:
+            texture: self.texture
+            pos: self.pos
+            size: self.size
+        StencilUnUse
+        Ellipse:
+            pos: self.pos
+            size: min(self.size)-2,min(self.size)-2
+        StencilPop
+""")
+
+class ProfileData(NetworkData):
     '''Profile Loading Functionality'''
 
     user_dict = ObjectProperty(None)
@@ -34,24 +137,20 @@ class ProfileData(object):
     name = StringProperty(None)
     location = ListProperty(None)
 
-    def loadDataFromServer(self, user_id, method = 'get_user_info'):
+    def on_primary_key(self,*args):
         app = App.get_running_app()
-        self.d = app.social_client.perspective.callRemote('get_user_info',user_id)
+        self.d = app.social_client.perspective.callRemote('get_user_info',self.primary_key)
         self.d.addCallback(self.createFromJson)
-        self.d.addCallback(self.initialize)
         return self.d
 
     def createFromJson(self,user_json):
-        print user_json
-        self.user_dict = json.loads(user_json)
-        self.images = self.user_dict['images']
-        self.info = self.user_dict['info']
-        self.name = self.user_dict['name']
-        self.location = self.user_dict['location']
-
-    def initialize(self,*args):
-        pass
-
+        if user_json:
+            self.user_dict = json.loads(user_json)
+            self.images = self.user_dict['images']
+            self.info = self.user_dict['info']
+            self.name = self.user_dict['name']
+            self.location = self.user_dict['location']
+            self.initialize()      
 
 class ProfileView(Widget,ProfileData):
 
@@ -127,8 +226,6 @@ class ProfileButton(ButtonBehavior,Widget,ProfileData):
 
         Widget.__init__(self,**kwargs)
         ButtonBehavior.__init__(self,**kwargs)
-        self.loadDataFromServer(user_id)
-
 
     def on_press(self):
         print 'calling target_func'
@@ -156,34 +253,62 @@ class ProfileButton(ButtonBehavior,Widget,ProfileData):
         self._layout.size = self.size
 
 
-Builder.load_string("""
-<-ProfileMapIcon>:
-    size_hint: None, None
-    source: root.source
-    size: [20,20]
-    allow_stretch: True
 
-    canvas:
-        Color:
-            rgb: 1,1,1
-        Ellipse:
-            pos: self.pos
-            size: min(self.size),min(self.size)
-        StencilPush
-        Ellipse:
-            pos: self.pos[0]+1,self.pos[1]+1,
-            size: min(self.size)-2,min(self.size)-2
-        StencilUse
-        Rectangle:
-            texture: self.texture
-            pos: self.pos
-            size: self.size
-        StencilUnUse
-        Ellipse:
-            pos: self.pos
-            size: min(self.size)-2,min(self.size)-2
-        StencilPop
-""")
+    
+class UserListEntry(ButtonBehavior,BoxLayout,ProfileData):
+    
+    title_text = StringProperty('')
+    img_source = StringProperty('')
+    body_text = StringProperty('')
+
+    def __init__(self,project_id,**kwargs):
+        super(UserListEntry,self).__init__(**kwargs)
+        self.primary_key = project_id
+
+    def add_button_icon(self,iconImage,callback,width=25):
+        ic = Icon(source=iconImage,size_hint=(None,None),width=width)
+        ic.bind(on_press = callback)
+        self.ids['button_bar'].add_widget(ic)
+        self.ids['button_bar'].width = width+5
+        
+    def initialize(self,**kwargs):
+        print 'public feature init'
+        self.img_source = self.images[-1]
+        self.title_text = self.name
+        self.body_text = self.info
+        
+    def on_img_source(self,*args):
+        self.ids['image'].source = self.img_source
+
+    def on_title_text(self,*args):
+        self.ids['title'].text = self.title_text.upper()
+
+    def on_body_text(self,*args):
+        self.ids['body'].text = self.body_text
+        
+class UserListView(Widget):
+    
+    userList = ListProperty(USERS)
+    
+    def __init__(self,**kwargs):
+        super(UserListView,self).__init__(**kwargs)
+        self.layout = GridLayout(cols=1, spacing=3, size_hint_y=None)
+        self.layout.bind(minimum_height=self.layout.setter('height'))
+
+
+        for i,prj in enumerate(self.userList):
+            pw = UserListEntry(i+1)
+            pw.add_button_icon(RACK_ICON,hello)
+            self.layout.add_widget(pw)
+
+        self.scroll = ScrollView(size_hint=(1, None))
+        self.scroll.add_widget(self.layout)
+        self.add_widget(self.scroll)
+
+        self.bind(size=self.update_rect)
+
+    def update_rect(self,*args):
+        self.scroll.size = self.size      
 
 class ProfileMapIcon(AsyncMapMarker,ProfileData):
     effects = [HorizontalBlurEffect(size=1), VerticalBlurEffect(size=1), FXAAEffect()]

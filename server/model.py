@@ -198,7 +198,6 @@ class User(Base):
     @property
     def user_json(self):
         '''should be called from within scope of session'''
-        print 'user json'
         with store_context(STORE):
             pictures = list([pic.locate() for pic in self.pictures])
         if self.current_location:
@@ -208,7 +207,8 @@ class User(Base):
         info = dict(name = self.name,\
                     info = self.info,\
                     location = loc,\
-                    images = pictures
+                    images = pictures,\
+                    friends = list([f.id for f in self.all_friends])
                     )
         return json.dumps(info, ensure_ascii=False)
 
@@ -298,6 +298,24 @@ class Project(Base):
     pictures = image_attachment('ProjectImage', uselist = True)
     locations = relationship('ProjectSpot',uselist = True)
     roles = relationship('Role',uselist = True)
+
+    @property
+    def project_json(self):
+        '''should be called from within scope of session'''
+        with store_context(STORE):
+            pictures = list([pic.locate() for pic in self.pictures])
+        if self.current_location:
+            loc = self.current_location.latlong
+        else:
+            loc = None
+        info = dict(name = self.name,
+                    info = self.info,
+                    location = loc,
+                    images = pictures,
+                    members = list([m.id for m in self.all_members]),
+                    roles = list([r.id for r in self.roles])
+                    )
+        return json.dumps(info, ensure_ascii=False)
 
     @property
     def current_location(self):
@@ -608,7 +626,7 @@ if __name__ == '__main__':
     metadata.drop_all(engine)
     metadata.create_all(engine)
     storeSomeUsers()
-    generateThumbnails(width = 50)
+    generateThumbnails(width = 200)
     generateThumbnails(ratio = 1)
     makeProjects()
     makeFriends()
