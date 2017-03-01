@@ -43,9 +43,10 @@ class Social_Interface(Avatar):
     _friends = None
     _projects = None
 
-    def __init__(self,userEmail):
+    def __init__(self,userEmail,userId):
         print 'init {}'.format(userEmail)
-        if userEmail:
+        if userEmail or userId:
+            self._user_id = userId
             self.initialize( userEmail )
         elif userEmail == False:
             #Public Interface
@@ -105,7 +106,8 @@ class Social_Interface(Avatar):
         '''Get User Info By Primary Key'''
         user = session.query(User).get(user_id)        
         if user:
-            print self.user_id, user_id, self.friends
+            if self.friends:
+                print self._user_id, user_id, self.friends
             json = user.user_json
             return json           
         else:
@@ -124,7 +126,7 @@ class Social_Interface(Avatar):
     @ITwistedData.sqlalchemy_method
     def db_assignSelfFromDatabase(self,session, userEmail):
         print 'assign from email {}'.format(userEmail)
-        user = session.query(User).filter(User.email == userEmail)
+        user = session.query(User).filter(User.email == userEmail).first()
         print 'got selfuser {}'.format(user)
         if user:
             self._user_id = user.id
@@ -268,7 +270,7 @@ class Social_AppRealm(object):
             #EmailStorage returns cred, Others Return A Username Or Something
             if IEmailStorage in interfaces:
                 print 'email avatar {}'.format(avatarId)
-                avatar = Social_Interface(avatarId)
+                avatar = Social_Interface(*avatarId)
                 return IPerspective, avatar, avatar.logout
             else:
                 avatar = Social_Interface(False)#Public Interface Call

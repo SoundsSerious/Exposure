@@ -162,7 +162,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     #Basic Information
     name = Column(Unicode, nullable=True)
-    email = Column(String(255),unique = True,nullable = False)
+    email = Column(String(255),nullable = False)
     info = Column( Text, nullable=True)
     created_date = Column(DateTime, default=datetime.utcnow)
 
@@ -524,7 +524,8 @@ PRJ_MEMBERS = {prj: list(set([random.choice(USERS) for i in range(random.randint
                                                   
 def makeProjects():
     with session_scope() as session:
-        for i,(proj,actors) in enumerate(PRJ_MEMBERS.items()):
+        for i,(proj) in enumerate(PROJECTS):
+            actors =  PRJ_MEMBERS[proj]
             #Create Project
             firstActor = '{}@gmail.com'.format(actors[0].replace(' ','.'))
             firstUser = session.query(User).filter(User.email == firstActor).first()
