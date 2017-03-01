@@ -42,7 +42,7 @@ class NetworkData:
 
     def on_primary_key(self,inst,val):
         '''Here we get data from the server'''
-        self.initialize()        
+        pass      
     
     def initialize(self,*args):
         '''We setup the kivy object here'''

@@ -72,7 +72,7 @@ Builder.load_string('''
             points: self.x,self.height,self.x,self.x+self.width,self.height
             width: 1
 
-    RoundedExpandingImage:
+    SquareExpandingWebImage:
         id: image
         source: root.img_source
         size_hint: (None,0.95)
@@ -206,7 +206,7 @@ Builder.load_string('''
                 text: root.title_text.upper()
                 height: 30
                 size_hint_y: None
-            SquareExpandingImage:
+            SquareExpandingWebImage:
                 id: image
                 source: root.img_source
                 height: 200
@@ -311,7 +311,6 @@ class ProjectData(NetworkData):
         return self.d
 
     def createFromJson(self,user_json):
-        print user_json
         self.user_dict = json.loads(user_json)
         self.images = self.user_dict['images']
         self.info = self.user_dict['info']
@@ -407,6 +406,7 @@ class DetailedPublicView(Widget,ProjectData):
         self.ids['body'].text = self.body_text             
 
 class FeatureListEntry(ButtonBehavior,BoxLayout,ProjectData):
+    
     title_text = StringProperty('')
     img_source = StringProperty('')
     body_text = StringProperty(LORN_IPSUM)
@@ -422,9 +422,20 @@ class FeatureListEntry(ButtonBehavior,BoxLayout,ProjectData):
         self.ids['button_bar'].width = width+5
         
     def initialize(self,**kwargs):
+        print 'initalize'
         self.img_source = self.images[-1]
         self.title_text = self.name
-        self.body_text = self.info    
+        self.body_text = self.info
+        
+    def on_img_source(self,*args):
+        print self.img_source
+        self.ids['image'].source = self.img_source
+
+    def on_title_text(self,*args):
+        self.ids['title'].text = self.title_text.upper()
+
+    def on_body_text(self,*args):
+        self.ids['body'].text = self.body_text         
         
 
 def hello(self):

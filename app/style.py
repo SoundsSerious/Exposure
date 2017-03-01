@@ -187,6 +187,55 @@ Builder.load_string(
             pos: self.center[0] - self.size[0]/2.0,self.center[1] - self.size[1]/2.0
         StencilPop
         
+
+<-ExpandingWebImage>:
+    canvas:
+        Color:
+            rgb: (1, 1, 1)        
+        Rectangle:
+            size: self.exp_image_size
+            pos: self.center[0] - self.exp_image_size[0]/2.0,self.center[1] - self.exp_image_size[1]/2.0            
+        StencilPush
+        Rectangle:
+            size: self.size
+            pos: self.center[0] - self.size[0]/2.0,self.center[1] - self.size[1]/2.0
+        StencilUse     
+        
+        Rectangle:
+            texture: self.texture
+            size: self.exp_image_size
+            pos: self.center[0] - self.exp_image_size[0]/2.0,self.center[1] - self.exp_image_size[1]/2.0
+
+        StencilUnUse
+        Rectangle:
+            size: self.size
+            pos: self.center[0] - self.size[0]/2.0,self.center[1] - self.size[1]/2.0
+        StencilPop
+        
+<-SquareExpandingWebImage>:
+    canvas:
+        Color:
+            rgb: (1, 1, 1)
+        Rectangle:
+            size: self.exp_image_size
+            pos: self.center[0] - self.exp_image_size[0]/2.0,self.center[1] - self.exp_image_size[1]/2.0             
+        StencilPush
+        Rectangle:
+            size: self.min_size
+            pos: self.center[0] - self.min_size[0]/2.0,self.center[1] - self.min_size[1]/2.0
+        StencilUse        
+        
+        Rectangle:
+            texture: self.texture
+            size: self.exp_image_size
+            pos: self.center[0] - self.exp_image_size[0]/2.0,self.center[1] - self.exp_image_size[1]/2.0
+
+        StencilUnUse
+        Rectangle:
+            size: self.min_size
+            pos: self.center[0] - self.min_size[0]/2.0,self.center[1] - self.min_size[1]/2.0
+        StencilPop         
+        
 <-RoundedWebImage>:
     canvas:
         Color:
@@ -443,7 +492,92 @@ class ExpandingImage(Image):
         
     min_size = AliasProperty(min_size, None, bind=(
         'texture', 'size', 'image_ratio', 'allow_stretch'))
+    
+class ExpandingWebImage( AsyncImage ):
+    
+    def get_norm_image_size(self):
+        if not self.texture:
+            return self.size
+        ratio = self.image_ratio
+        w, h = self.size
+        tw, th = self.texture.size
+
+        # ensure that the width is always maximized to the containter width
+        if self.allow_stretch:
+            if not self.keep_ratio:
+                return w, h
+            iw = w
+        else:
+            iw = min(w, tw)
+        # calculate the appropriate height
+        ih = iw / ratio
+        # if the height is too higher, take the height of the container
+        # and calculate appropriate width. no need to test further. :)
+        if ih > h:
+            if self.allow_stretch:
+                ih = h
+            else:
+                ih = min(h, th)
+            iw = ih * ratio
+
+        return iw, ih
+
+    norm_image_size = AliasProperty(get_norm_image_size, None, bind=(
+        'texture', 'size', 'image_ratio', 'allow_stretch'))    
+    
+    def get_exp_background_size(self):
+        w,h = self.size
+        WT,HT = self.get_norm_image_size()
         
+        if HT == 0: 
+            AR = 1
+        else:
+            AR = WT/HT
+            if AR == 0: AR = 1
+        XMx,YMx = max(w,WT),max(h,HT)
+
+        x1 = YMx/AR +1
+        y1 = x1/AR +1
+
+        x2 = XMx+1
+        y2 = x2/AR +1
+        
+        y3 = YMx+1
+        x3 = y3*AR + 1
+        
+        y4 = XMx/AR + 1
+        x4 = y4*AR + 1
+        
+        if (XMx-x1)<0 and (YMx-y1) < 0:
+            return x1,y1
+        elif (XMx-x2)<0 and (YMx-y2) < 0:
+            return x2,y2
+        elif (XMx-x3)<0 and (YMx-y3) < 0:
+            return x3,y3
+        elif (XMx-x4)<0 and (YMx-y4) < 0:
+            return x4,y4            
+        
+    exp_image_size = AliasProperty(get_exp_background_size, None, bind=(
+        'texture', 'size', 'image_ratio', 'allow_stretch'))
+    
+    @property
+    def min_side(self):    
+        mn = min(self.size)
+        return mn
+    
+    def min_size(self):
+        ms = self.min_side
+        return ms,ms
+        
+    min_size = AliasProperty(min_size, None, bind=(
+        'texture', 'size', 'image_ratio', 'allow_stretch'))    
+        
+class SquareExpandingImage(ExpandingImage):
+    pass
+
+class SquareExpandingWebImage(ExpandingWebImage):
+    pass 
+
 
 class Icon(ButtonBehavior,SquareExpandingImage):
     background_color = ListProperty([1,1,1,1])
@@ -494,7 +628,6 @@ class RoundedImage(Image):
         self.radius_cmd()
         super(RoundedImage,self).__init__(**kwargs)
         self.bind(size = self.radius_cmd)
-        #self.bind(pos = self.center_image)
 
     def center_image(self, *args):
         print 'centering'
@@ -503,10 +636,8 @@ class RoundedImage(Image):
                     y - self.norm_image_size[1]/2.0
 
     def radius_cmd(self,*args):
-        #if self.height:
         self._radius = [self.height * self._radius_pct]
-        #else:
-        #    return [10]
+
         
 class RoundedExpandingImage(RoundedImage):
     
@@ -547,9 +678,6 @@ class RoundedExpandingImage(RoundedImage):
         'texture', 'size', 'image_ratio', 'allow_stretch'))
          
         
-
-
-
 class RoundedWebImage(AsyncImage):
 
     _radius_pct = 0.5
@@ -558,7 +686,6 @@ class RoundedWebImage(AsyncImage):
     def __init__(self,**kwargs):
         super(RoundedWebImage,self).__init__(**kwargs)
         self.bind(size = self.radius_cmd)
-        #self.bind(pos = self.center_image)
 
     def center_image(self, *args):
         print 'centering'
@@ -744,8 +871,7 @@ class AlignedTextInput(TextInput):
         self.padding_x = px
         self.padding_y = py
 
-class SquareExpandingImage(ExpandingImage):
-    pass 
+
 
 class CircularIcon(Icon):
     pass
