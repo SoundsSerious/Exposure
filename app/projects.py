@@ -29,6 +29,10 @@ from social_interface import *
 from maps import *
 from style import *
 
+from kivy.uix.recycleview import RecycleView
+
+
+
 LORN_IPSUM = '''Lorem ipsum dolor sit amet, ut altera adipiscing reformidans his. Ut suas clita epicuri eos. Justo verterem eu pri, autem iudicabit in mea. Id vel alienum fabellas definitionem, ex usu putant corpora copiosae, nam aliquip posidonium no.'''*9
 
 
@@ -428,18 +432,18 @@ if __name__ == '__main__':
     class PrjApp(SocialApp):
 
         def setupMainScreen(self):
-            lay = FloatLayout()
-            with lay.canvas:
-                rect = Rectangle(size=lay.size,color=(1,1,1,1))
-                def update_lay(inst,val):
-                    rect.size = inst.size
-            lay.bind(size = update_lay)
-            lay.add_widget( MapWidget(self))
-            lay.add_widget(PublicMapView(1))
-            lay.add_widget( PublicMapView(2))
-            lay.add_widget(FeatureListView())
-            lay.add_widget( RoundedButton(text='Apply',**but_opt))
-            mp = MapWidget(self)
+#            lay = FloatLayout()
+#            with lay.canvas:
+#                rect = Rectangle(size=lay.size,color=(1,1,1,1))
+#                def update_lay(inst,val):
+#                    rect.size = inst.size
+#            lay.bind(size = update_lay)
+#            lay.add_widget( MapWidget(self))
+#            lay.add_widget(PublicMapView(1))
+#            lay.add_widget( PublicMapView(2))
+#            lay.add_widget(FeatureListView())
+#            lay.add_widget( RoundedButton(text='Apply',**but_opt))
+#            mp = MapWidget(self)
             
             return DetailedPublicView(2)
 
