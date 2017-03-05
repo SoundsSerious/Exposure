@@ -86,6 +86,13 @@ class Social_Interface(Avatar):
             d = defer.maybeDeferred(self.db_get_friends_ids)
             return d
         raise SocialException("No User Object")
+        
+    def perspective_project_ids(self):
+        print 'getting friend ids'
+        if self.user:
+            d = defer.maybeDeferred(self.db_get_projects_ids)
+            return d
+        raise SocialException("No User Object")        
 
     def perspective_get_user_info(self,user_id):
         print 'getting user info {}'.format(user_id)
@@ -149,6 +156,13 @@ class Social_Interface(Avatar):
         user = session.query(User).get(self.user.id)
         friends = user.all_friends
         return list([friend.id for friend in friends])
+        
+    @ITwistedData.sqlalchemy_method
+    def db_get_projects_ids(self, session):
+        '''Get Local Users Via GEO information'''
+        user = session.query(User).get(self.user.id)
+        projects = user.member_of
+        return list([prj.id for prj in projects])        
 
     @ITwistedData.sqlalchemy_method
     def db_get_nearby(self,session, miles = 100):

@@ -17,14 +17,17 @@ from twisted.spread import pb
 from twisted.spread.pb import PBClientFactory
 from twisted.python import log
 from twisted.cred.credentials import IAnonymous
-
+from kivy.uix.recycleview import RecycleView
+from kivy.lang import Builder
+from kivy.properties import *
 from datetime import datetime
-import json
 
 from kivy.app import *
 from kivy.uix.screenmanager import *
 from kivy.properties import *
 
+import json
+import weakref
 
 from config import *
 from interfaces import *
@@ -35,6 +38,77 @@ class EmailAuth(object):
     def __init__(self, email):
         self.email = email
 
+Builder.load_string('''
+<NetworkListView>:
+    background_color: [1,1,1,1]
+    size_hint: 1,1
+    shadow_frac: 0.05
+    canvas:
+        Color:
+            rgba: 0.7,0.7,0.7,1
+        Rectangle:
+            source: os.path.join('resources','background.jpg')
+            size: self.size
+            pos: self.pos
+    canvas.after:
+        Color:
+            rgba: 1,1,1,1
+        Rectangle:
+            source:os.path.join('resources','vert_trans.png')
+            size: self.width, self.height*self.shadow_frac
+            pos: self.x,self.y+self.height*(1-self.shadow_frac)
+    RecycleBoxLayout:
+        id: lay
+        default_size: None, 100
+        default_size_hint: 1, None
+        size_hint_y: None
+        height: self.minimum_height
+        orientation: 'vertical'
+'''
+)
+class NetworkListView(RecycleView):
+    '''Holds Primary Keys, Reference To Other Property Can Be Used
+
+    If Using ref, requires that you pass a refObj which is the EventDispatcher
+    containing the property
+
+    If no refObj is passed, We'll assume the property is in the App Class'''
+
+    primary_keys = ListProperty(None)
+    ref = ObjectProperty(None)
+    refObj = ObjectProperty(None)
+    reference_prop = None
+    is_reference = BooleanProperty(False)
+
+    def __init__(self,**kwargs):
+        super(NetworkListView,self).__init__(**kwargs)
+        self.bind( primary_keys = self.on_primary_keys)        
+        
+        self.primary_keys = kwargs.get('primary_keys',self.primary_keys)
+        
+        if 'ref' in kwargs:
+            #Get Actual Property Out Of Observer
+            self.ref = kwargs.get('ref',self.ref)
+            self.refObj = kwargs.get('refObj',self.refObj)
+            
+            self.reference_prop = self.ref().prop
+            self.is_reference = True
+
+
+    def on_is_reference(self,inst,val):
+        if self.is_reference:
+            #Bind To Existing Property
+            if self.refObj:
+                self.reference_prop.fbind(self.refObj,self.fupdate_primary_keys,False)
+            else:
+                eventDispatcher = App.get_running_app()
+                self.reference_prop.fbind(eventDispatcher,self.fupdate_primary_keys,False)
+
+    def fupdate_primary_keys(self,inst,val):
+        self.primary_keys = val
+
+    def on_primary_keys(self,inst,val):
+        self.data = [{'primary_key': pk} for pk in self.primary_keys]
 
 class NetworkData:
     '''Interface To Handle Getting Data From A Server'''
@@ -42,22 +116,21 @@ class NetworkData:
 
     def on_primary_key(self,inst,val):
         '''Here we get data from the server'''
-        pass      
-    
+        pass
+
     def initialize(self,*args):
         '''We setup the kivy object here'''
-        print 'network init'
         pass
-    
+
     def catchError(self,failure):
         print 'ERROR:',self,str(failure)
-    
+
 class EditableNetworkData(NetworkData):
     '''Interface to Receive and Edit Data From A Server'''
-    
+
     def updateServerData(self):
         '''Map Internal Kivy Form Data To Server RPC Method'''
-        pass     
+        pass
 
 class SocialApp(App):
 
@@ -81,9 +154,9 @@ class SocialApp(App):
 
     def setupMainScreen(self):
         pass
-    
+
     def update_client(self,value, deffered):
-        pass    
+        pass
 
     def on_connect(self, client):
         print "connected successfully!"
@@ -92,7 +165,7 @@ class SocialApp(App):
     def on_social_client(self,instance, value):
         print 'updating social client'
         reactor.callLater(1,self.startUpdate)
-        
+
     def startUpdate(self):
         d = defer.maybeDeferred(self.get_user_id)
         self.update_client( deffered = d )
@@ -111,13 +184,13 @@ class SocialApp(App):
     def _cb_jsonToDict(self, json_information):
         if json_information:
             return json.loads(json_information)
-        
-            
+
+
     def _cb_assignUserId(self,userId):
         print 'assigning user id {}'.format(userId)
         if userId or userId == 0:
             self.user_id = userId
-            return userId   
+            return userId
 
 class ReconnectingPBClientFactory(PBClientFactory,
                                  protocol.ReconnectingClientFactory):

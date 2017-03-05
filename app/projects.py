@@ -7,6 +7,7 @@ Created on Wed Feb 15 19:28:32 2017
 import os, sys
 import random
 from glob import glob
+import functools
 
 from kivy.uix.widget import Widget
 from kivy.uix.label import Label
@@ -18,6 +19,7 @@ from kivy.uix.image import AsyncImage
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.screenmanager import ScreenManager, Screen, FallOutTransition, \
                                     FadeTransition, RiseInTransition
+from kivy.uix.recycleview.views import RecycleDataViewBehavior
 from kivy.properties import *
 from kivy.clock import Clock
 from kivy.app import App
@@ -29,7 +31,7 @@ from social_interface import *
 from maps import *
 from style import *
 
-from kivy.uix.recycleview import RecycleView
+
 
 
 
@@ -49,8 +51,10 @@ Builder.load_string('''
         Rectangle:
             size: self.size
             pos: self.pos
+
+    canvas.after:
         Color:
-            rgba: 0,0,0,1
+            rgba: 0,0,0,1        
         Line:
             points: self.x,1,self.x,self.x+self.width,1
             width: 1
@@ -116,7 +120,7 @@ Builder.load_string('''
             size: (self.width,self.height-self.tri_height)
             pos: self.center[0] - self.width/2.0,self.center[1] - self.height/2.0+self.tri_height
             radius: self.radius
-            
+
     canvas.after:
         StencilUnUse
         RoundedRectangle:
@@ -145,7 +149,7 @@ Builder.load_string('''
                 id: title
                 color: 0,0,0,1
                 font_size: 20
-                font_name: 'fonts/Monument_Valley_1.2-Regular.otf'                
+                font_name: 'fonts/Monument_Valley_1.2-Regular.otf'
                 text: root.title_text.upper()
                 height: 30
                 size_hint_y: None
@@ -236,30 +240,30 @@ Builder.load_string('''
             pos: self.pos
             size: min(self.size)-2,min(self.size)-2
         StencilPop
-        
-<ProjectListView>:
-    background_color: [1,1,1,1]
-    size_hint: 1,1
-    shadow_frac: 0.05
-    canvas:
-        Color:
-            rgba: 0.7,0.7,0.7,1
-        Rectangle:
-            source: os.path.join('resources','background.jpg')
-            size: self.size
-            pos: self.pos
-    canvas.after:
-        Color:
-            rgba: 1,1,1,1
-        Rectangle:
-            source:os.path.join('resources','vert_trans.png')
-            size: self.width, self.height*self.shadow_frac
-            pos: self.x,self.y+self.height*(1-self.shadow_frac)
+
             '''
 )
+#<ProjectListView>:
+#    background_color: [1,1,1,1]
+#    size_hint: 1,1
+#    shadow_frac: 0.05
+#    canvas:
+#        Color:
+#            rgba: 0.7,0.7,0.7,1
+#        Rectangle:
+#            source: os.path.join('resources','background.jpg')
+#            size: self.size
+#            pos: self.pos
+#    canvas.after:
+#        Color:
+#            rgba: 1,1,1,1
+#        Rectangle:
+#            source:os.path.join('resources','vert_trans.png')
+#            size: self.width, self.height*self.shadow_frac
+#            pos: self.x,self.y+self.height*(1-self.shadow_frac)
+#
 
 
-    
 #Add This To Classes Later... Like Profile... Maybe Common Interface
 class ProjectData(NetworkData):
     '''Profile Loading Functionality'''
@@ -284,7 +288,7 @@ class ProjectData(NetworkData):
             self.name = self.user_dict['name']
             self.location = self.user_dict['location']
             self.initialize()
-    
+
 class ProjectMapIcon(AsyncMapMarker,ProjectData):
 
     def __init__(self,maps,project_id,**kwargs):
@@ -297,7 +301,7 @@ class ProjectMapIcon(AsyncMapMarker,ProjectData):
         self.lat = self.location[0]
         self.lon = self.location[1]
         print 'adding at {},{}'.format(self.lat,self.lon)
-        self.maps.map.add_marker(self)    
+        self.maps.map.add_marker(self)
 
 class PublicMapView(DragBehavior,Widget,ProjectData):
     radius = ListProperty([20])
@@ -306,19 +310,19 @@ class PublicMapView(DragBehavior,Widget,ProjectData):
 
     title_text = StringProperty('')
     img_source = StringProperty('')
-    body_text = StringProperty('')    
-    
-    def __init__(self,project_id,**kwargs):
+    body_text = StringProperty('')
+
+    def __init__(self,primary_key,**kwargs):
         super(PublicMapView,self).__init__(**kwargs)
-        self.primary_key = project_id
+        self.primary_key = kwargs.get('primary_key',self.primary_key)
         self.ids['layout'].bind(minimum_height=self.ids['layout'].setter('height'))
-        
-    
+
+
     def initialize(self,**kwargs):
         self.img_source = self.images[-1]
         self.title_text = self.name
         self.body_text = self.info
-    
+
     def on_img_source(self,*args):
         print self.img_source
         self.ids['image'].source = self.img_source
@@ -327,24 +331,24 @@ class PublicMapView(DragBehavior,Widget,ProjectData):
         self.ids['title'].text = self.title_text
 
     def on_body_text(self,*args):
-        self.ids['body'].text = self.body_text        
-        
-        
-class DetailedPublicView(Widget,ProjectData):    
+        self.ids['body'].text = self.body_text
+
+
+class DetailedPublicView(Widget,ProjectData):
     title_text = StringProperty('')
     img_source = StringProperty('')
-    body_text = StringProperty(LORN_IPSUM)    
+    body_text = StringProperty(LORN_IPSUM)
 
-    def __init__(self,project_id,**kwargs):
+    def __init__(self,**kwargs):
         super(DetailedPublicView,self).__init__(**kwargs)
-        self.primary_key = project_id
+        self.primary_key = kwargs.get('primary_key',self.primary_key)
         self.ids['layout'].bind(minimum_height=self.ids['layout'].setter('height'))
-        
+
     def initialize(self,**kwargs):
         self.img_source = self.images[-1]
         self.title_text = self.name
         self.body_text = self.info
-        
+
     def on_img_source(self,*args):
         print self.img_source
         self.ids['image'].source = self.img_source
@@ -353,29 +357,29 @@ class DetailedPublicView(Widget,ProjectData):
         self.ids['title'].text = self.title_text
 
     def on_body_text(self,*args):
-        self.ids['body'].text = self.body_text             
+        self.ids['body'].text = self.body_text
 
-class ProjectListEntry(ButtonBehavior,BoxLayout,ProjectData):
-    
+class ProjectListEntry(ButtonBehavior,RecycleDataViewBehavior,BoxLayout,ProjectData):
+
     title_text = StringProperty('')
     img_source = StringProperty('')
     body_text = StringProperty('')
 
-    def __init__(self,project_id,**kwargs):
+    def __init__(self,**kwargs):
         super(ProjectListEntry,self).__init__(**kwargs)
-        self.primary_key = project_id
+        self.primary_key = kwargs.get('primary_key',self.primary_key)
 
     def add_button_icon(self,iconImage,callback,width=25):
         ic = Icon(source=iconImage,size_hint=(None,None),width=width)
         ic.bind(on_press = callback)
         self.ids['button_bar'].add_widget(ic)
         self.ids['button_bar'].width = width+5
-        
+
     def initialize(self,**kwargs):
         self.img_source = self.images[-1]
         self.title_text = self.name
         self.body_text = self.info
-        
+
     def on_img_source(self,*args):
         print self.img_source
         self.ids['image'].source = self.img_source
@@ -384,44 +388,36 @@ class ProjectListEntry(ButtonBehavior,BoxLayout,ProjectData):
         self.ids['title'].text = self.title_text.upper()
 
     def on_body_text(self,*args):
-        self.ids['body'].text = self.body_text         
-        
+        self.ids['body'].text = self.body_text
 
-class ProjectListView(Widget):
+class ProjectListView(NetworkListView):
 
     def __init__(self,**kwargs):
         super(ProjectListView,self).__init__(**kwargs)
-        self.layout = GridLayout(cols=1, spacing=3, size_hint_y=None)
-        self.layout.bind(minimum_height=self.layout.setter('height'))
+        self.viewclass = ProjectListEntry
 
-
-        for i,prj in enumerate(PROJECTS):
-            pw = ProjectListEntry(i+1)
-            pw.add_button_icon(ADDUSER_ICON,hello)
-            self.layout.add_widget(pw)
-
-        self.scroll = ScrollView(size_hint=(1, None))
-        self.scroll.add_widget(self.layout)
-        self.add_widget(self.scroll)
-
-        self.bind(size=self.update_rect)
-
-    def update_rect(self,*args):
-        self.scroll.size = self.size
+class ProjectsMapView(NetworkListView):
+    '''Container That Holds Primary Keys, To Update A Widgets On A Map'''
+    
+    def __init__(self,maps,**kwargs):
+        super(ProjectListView,self).__init__(**kwargs)
+        self.viewclass = functools.partial(ProjectMapIcon,maps=maps)
 
 
 
 
 if __name__ == '__main__':
+    from kivy.support import install_twisted_reactor
+    install_twisted_reactor()    
 
     font_opts = dict(size_hint=(1,0.9),
                         color=(0,0,0,1),text_size=(100,None),\
                         valign='top',halign='center',
                         font_size=20,
                         font_name=os.path.join('fonts','Monument_Valley_1.2-Regular.ttf'))
-    
+
     icon_opt = dict(size_hint=(0.75,1))
-    
+
     but_opt = dict(color_normal=(1,1,1,1),color_down=(0.9,0.9,0.9,1),\
                     border_color=(177/255.,144/255.,70/255.,1),radius=5,\
                     color=(0,0,0,1),size_hint=(0.8,0.05),border_width=2,\
@@ -444,7 +440,7 @@ if __name__ == '__main__':
 #            lay.add_widget(FeatureListView())
 #            lay.add_widget( RoundedButton(text='Apply',**but_opt))
 #            mp = MapWidget(self)
-            
+
             return DetailedPublicView(2)
 
 

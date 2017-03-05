@@ -5,6 +5,9 @@ from kivy import resources
 import random
 from glob import glob
 import sys
+from kivy.loader import Loader
+from kivy.uix.image import Image
+
 sys.path.append('../')
 
 CUR_URL = '127.0.0.1'
@@ -45,6 +48,12 @@ CAMERA_ICON = os.path.join(APP_PATH,'icons','photo-camera.png')
 RIBBON_ICON = os.path.join(APP_PATH,'resources','ribbon.png')
 ADDUSER_ICON = os.path.join(APP_PATH,'icons','uxpin-icon-set_add_user.png')
 RACK_ICON = os.path.join(APP_PATH,'icons','uxpin-icon-set_rack.png')
+LOADING_GIF = os.path.join(APP_PATH,'resources','blockcolorspin.gif')
+
+Loader.loading_image = LOADING_GIF#Image(   source = LOADING_GIF, \
+                       #         size_hint = (0.5,0.5),
+                       #         pos_hint = {'center_x':0.5,'center_y':0.5}
+                       #    )
 
 HEADER_FONT = os.path.join(APP_PATH,'fonts','hotel_font.ttf')
 MENU_FONT = os.path.join(APP_PATH,'fonts','Raleway-SemiBold.ttf')

@@ -49,67 +49,93 @@ DEFAULT_LOADING_IMAGE = os.path.join(EXP_PATH,'app','loading_apeture.png')
 from kivy.loader import Loader
 loadingImage = Loader.image(DEFAULT_LOADING_IMAGE)
 
+class ProfileMenu(MenuBar):
+
+    def __init__(self,app,**kwargs):
+        super(ProfileMenu,self).__init__(app,**kwargs)
+        
+        fref = weakref.ref(self.app.friends)
+        pref = weakref.ref(self.app.projects)
+        
+        for screen in ('overview','roles','projects','messages'):
+            if screen == 'overview':
+                self.addMenuScreenWidget(screen,UserListView(ref=fref),**but_opt)
+            elif screen == 'messages':
+                self.addMenuScreenWidget(screen,UserListView(ref=fref),**but_opt)
+            else:
+                self.addMenuScreenWidget(screen,ProjectListView(ref=pref),**but_opt)        
+
+class ProjectsMenu(MenuBar):
+    
+    def __init__(self,app,**kwargs):
+        super(ProjectsMenu,self).__init__(app,**kwargs)
+        
+        fref = weakref.ref(self.app.friends)
+        pref = weakref.ref(self.app.projects)
+        
+        for screen in ('map','nearby','your projects','make'):
+            print screen
+            if screen == 'map':
+                self.addMenuScreenWidget(screen,MapWidget(self),**but_opt)
+            elif screen == 'your projects':
+                project_view = MenuTabSlider(self,size_hint=(1,1))
+                for _screen in ('overview','crew chat','crew list','auditions','edit'):
+                    if _screen in ('crew list','crew chat','auditioins'):
+                        project_view.addMenuScreenWidget(_screen,UserListView(ref=fref))
+                    else:
+                        project_view.addMenuScreenWidget(_screen,ProjectListView(ref=pref))
+                self.addMenuScreenWidget(screen,project_view,**but_opt)
+            else:
+                self.addMenuScreenWidget(screen,ProjectListView(ref=pref),**but_opt)
+
+class CastingMenu(MenuBar):
+
+    def __init__(self,app,**kwargs):
+        super(CastingMenu,self).__init__(app,**kwargs)
+        
+        fref = weakref.ref(self.app.friends)
+        pref = weakref.ref(self.app.projects)
+        
+        for screen in ('map','nearby','your roles','make'):
+            print screen
+            if screen == 'map':
+                self.addMenuScreenWidget(screen,MapWidget(self),**but_opt)
+            elif screen == 'nearby':
+                self.addMenuScreenWidget(screen,ProjectListView(ref=pref),**but_opt)
+            elif screen == 'your roles':
+                role_view = MenuTabSlider(self,size_hint=(1,1))
+                for _screen in ('overview','canidates','applicants','invite'):
+                    if _screen in ('canidates','applicants'):
+                        role_view.addMenuScreenWidget(_screen, UserListView(ref=fref))
+                    else:
+                        role_view.addMenuScreenWidget(_screen,ProjectListView(ref=pref))
+                self.addMenuScreenWidget(screen,role_view,**but_opt)
+            else:
+                self.addMenuScreenWidget(screen,UserListView(ref=fref),**but_opt)
+
 class ExposureHomeWidget(SocialHomeWidget):
     '''Manages Creen Widgets With Application Drawer'''
 
     app = None
     initialized = False
-    
+
     maps = ObjectProperty(None)
-    profiles = ObjectProperty(None)
+    profile = ObjectProperty(None)
     chat = ObjectProperty(None)
-    
+
     def __init__(self, app, **kwargs):
-        self.touch_accept_width=50 
+        self.touch_accept_width=50
         super(ExposureHomeWidget,self).__init__(app,**kwargs)
+
 
     def initialize(self):
         print 'initializing'
+
+        self.profile = ProfileMenu(self.app)
+        self.projects = ProjectsMenu(self.app)
+        self.casting = CastingMenu(self.app)
+        self.camera = CameraWidget()
         
-        self.profile = MenuBar(self)
-        for screen in ('overview','roles','projects','messages'):
-            print screen
-            if screen == 'overview':
-                self.profile.addMenuScreenWidget(screen,UserListView(),**but_opt)
-            elif screen == 'messages':
-                self.profile.addMenuScreenWidget(screen,UserListView(),**but_opt)
-            else:
-                self.profile.addMenuScreenWidget(screen,ProjectListView(),**but_opt)
-
-        self.projects = MenuBar(self)
-        for screen in ('map','nearby','your projects','make'):
-            print screen
-            if screen == 'map':
-                self.projects.addMenuScreenWidget(screen,MapWidget(self),**but_opt)
-            elif screen == 'your projects':
-                project_view = MenuTabSlider(self,size_hint=(1,1))
-                for _screen in ('overview','crew chat','crew list','auditions','edit'):
-                    if _screen in ('crew list','crew chat','auditioins'):
-                        project_view.addMenuScreenWidget(_screen,UserListView())
-                    else:
-                        project_view.addMenuScreenWidget(_screen,ProjectListView())
-                self.projects.addMenuScreenWidget(screen,project_view,**but_opt)
-            else:
-                self.projects.addMenuScreenWidget(screen,ProjectListView(),**but_opt)
-
-        self.casting = MenuBar(self)
-        for screen in ('map','nearby','your roles','make'):
-            print screen
-            if screen == 'map':
-                self.casting.addMenuScreenWidget(screen,MapWidget(self),**but_opt)
-            elif screen == 'nearby':
-                self.casting.addMenuScreenWidget(screen,ProjectListView(),**but_opt)
-            elif screen == 'your roles':
-                role_view = MenuTabSlider(self,size_hint=(1,1))
-                for _screen in ('overview','canidates','applicants','invite'):
-                    if _screen in ('canidates','applicants'):
-                        role_view.addMenuScreenWidget(_screen, UserListView())
-                    else:
-                        role_view.addMenuScreenWidget(_screen,ProjectListView())
-                self.casting.addMenuScreenWidget(screen,role_view,**but_opt)
-            else:
-                self.casting.addMenuScreenWidget(screen,UserListView(),**but_opt)
-
         self.addMenuScreenWidget('profile',CircularIcon(source=PROFILE_ICON,**icon_opt)\
                                                      ,self.profile,**font_opts)
         self.addMenuScreenWidget('projects',CircularIcon(source=PROJECTS_ICON,**icon_opt)\
@@ -117,43 +143,47 @@ class ExposureHomeWidget(SocialHomeWidget):
         self.addMenuScreenWidget('casting',CircularIcon(source=CASTING_ICON,**icon_opt)\
                                                     ,self.casting,**font_opts)
         self.addMenuScreenWidget('camera',CircularIcon(source=CAMERA_ICON,**icon_opt)\
-                                                    ,CameraWidget(),**font_opts)
+                                                    ,self.camera,**font_opts)
         self.addMenuScreenWidget('',RoundedButton(text='logout',**but_opt),Widget())
 
 
     def update_on_local_users(self,instance,local_users):
         pass
-            
+
     def update_on_friends(self,instance,friends):
         pass
 
     def checkUidThenFire(self,instance,userId):
         pass
-            
+
     def edit_user_info(self,*args,**kwargs):
         print 'hey hey whats going on...(im getting edited)'
-    
+
 
 
 
 
 class ExposureApp(SocialApp):
 
+    #User Private Relationships
     friends = ListProperty(None)
     projects = ListProperty(None)
-    local_users = ListProperty(None)  
-
+    
+    #User Public Relationships
+    local_users = ListProperty(None)
+    local_projects = ListProperty(None)
+    
     def auth_handler(self, *args):
         if self.authenticated == False:
             self.loginScreenManager.current = 'login'
         else:
             self.socialWidget = ExposureHomeWidget(self)
-            self.appScreen.add_widget(self.socialWidget)            
+            self.appScreen.add_widget(self.socialWidget)
             self.loginScreenManager.current = 'app'
             reactor.callLater(1,self.startUpdate)
 
     def setupMainScreen(self):
-        #Window.size = (iphone['width'],iphone['height'])
+        Window.size = (iphone['width'],iphone['height'])
         self.loginScreenManager = ScreenManager(transition=FadeTransition())
 
         self.loginScreen = Screen(name = 'login')
@@ -179,7 +209,8 @@ class ExposureApp(SocialApp):
         deffered.addCallback(self.get_user_info)
         deffered.addCallback(self.get_friends)
         deffered.addCallback(self.get_local_users)
-        
+        deffered.addCallback(self.get_projects)
+
     def get_user_info(self, user_id=None):
         '''load user info, defaults to self, if self will update user_dict info'''
 
@@ -217,11 +248,20 @@ class ExposureApp(SocialApp):
         else: #Shooting Blanks
             return []
             
+    def get_projects(self, *args):
+        '''Yeild Users From Server'''
+        print 'get friends from {}'.format(self.user_id)
+        if self.social_client and self.authenticated:
+            d = self.social_client.perspective.callRemote('project_ids')
+            return d.addCallback(self._cb_assignProjects)
+        else: #Shooting Blanks
+            return []            
+
     def _cb_assignUserInfo(self,user_dict):
         print 'assigning user info {}'.format(user_dict)
         if user_dict:
             self.user_object = user_dict
-            return self.user_object            
+            return self.user_object
 
     def _cb_assignLocalUsers(self,localUsersResponse):
         print 'assigning local users {}'.format( localUsersResponse )
@@ -236,6 +276,13 @@ class ExposureApp(SocialApp):
             self.friends = friendsList
             return self.friends
         return []
+        
+    def _cb_assignProjects(self,projectList):
+        print 'assigning friends {}'.format( projectList )
+        if projectList:
+            self.projects = projectList
+            return self.friends
+        return []        
 
 
 

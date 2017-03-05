@@ -32,7 +32,7 @@ class EmailChecker(object):
     credentialInterfaces = [IEmailStorage]
 
     ids = {}
-    
+
     @ITwistedData.sqlalchemy_method
     def checkEmails(self,session, email):
         '''where we check if emails are in EMAILS'''
@@ -42,17 +42,18 @@ class EmailChecker(object):
             self.getUserId(session,email)
             defer.returnValue(True)
         else:
-            defer.returnValue(False)
+            self.createUser(session,email)
+            #self.getUserId(session,email)
+            defer.returnValue(True)
 
-    @ITwistedData.sqlalchemy_method
     def createUser(self,session, email):
         newUser = User(email = email)
         session.add(newUser)
-        session.flush()
+        session.commit() #Moi Moi Importanto! The UID Return Won't Work Otherwise
         print 'Adding User {}'.format(email)
         self.ids[email] = newUser.id
         return newUser.id
-    
+
     def getUserId(self,session,email):
         user = session.query(User).filter(User.email == email).first()
         print 'got selfuser {}'.format(user)
@@ -61,24 +62,19 @@ class EmailChecker(object):
 
 
     def requestAvatarId(self, credentials, firstTry = True, id = None):
-        print 'requesting avatarid with {}'.format( credentials )
-        d = defer.maybeDeferred(self.checkEmails,credentials.email)
-
-        def _cb_checkOrRegister(foundUser):
-            if foundUser: #Check Email List
-                    #d.addCallback(lambda arg: self.getUserId(email = credentials.email))
-                    return defer.succeed((credentials.email,self.ids[credentials.email]))
-            elif validate_email(credentials.email) and firstTry: #Register Email If Valid Address
-                #Create New User
-                d.addCallback(lambda arg: self.createUser(credentials.email))
-                #Recursive Loopback
-                d.addCallback(lambda x: self.requestAvatarId(credentials, False, id = x))
-            else:
-                return defer.fail(credError.UnhandledCredentials())
-
         def _cb_dbError(failure):
             failure.trap(Exception)
             raise Exception('Got An Error: {}'.format(str(failure)))
+
+        print 'requesting avatarid with {}'.format( credentials )
+        d = defer.maybeDeferred(self.checkEmails,credentials.email)
+        d.addErrback(  _cb_dbError )
+
+        def _cb_checkOrRegister(foundUser):
+            if foundUser: #Check Email List
+                    return defer.succeed((credentials.email,self.ids[credentials.email]))
+            else:
+                return defer.fail(credError.UnhandledCredentials())
 
         d.addCallback( _cb_checkOrRegister )
         d.addErrback(  _cb_dbError )

@@ -233,8 +233,8 @@ class MenuBar(BoxLayout):
         self.menuScreenManager.current = screenName
 
     def update_rect(self,*args):
-        print self.menu.size, self.menu.children[0].size
-
+        pass
+    
 class SocialNavigationBar(NavigationDrawer):
     touch_accept_height = NumericProperty(200)
 

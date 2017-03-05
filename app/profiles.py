@@ -10,13 +10,14 @@ from kivy.uix.button import *
 from kivy.uix.behaviors import *
 from kivy.uix.behaviors.button import ButtonBehavior
 from kivy.uix.effectwidget import *
-
+from kivy.lang import Builder
+from kivy.properties import *
 from kivy.garden.mapview import MarkerMapLayer, MapLayer, MapMarker
 from kivy.garden.smaa import SMAA
+from kivy.uix.recycleview.views import RecycleDataViewBehavior
 
 import json
 
-from kivy.properties import *
 
 from style import *
 from maps import *
@@ -25,27 +26,27 @@ from social_interface import *
 
 path = EXP_PATH
 
+#<UserListView>:
+#    background_color: [1,1,1,1]
+#    size_hint: 1,1
+#    shadow_frac: 0.05
+#    canvas:
+#        Color:
+#            rgba: 0.7,0.7,0.7,1
+#        Rectangle:
+#            source: os.path.join('resources','background.jpg')
+#            size: self.size
+#            pos: self.pos
+#
+#    canvas.after:
+#        Color:
+#            rgba: 1,1,1,1
+#        Rectangle:
+#            source: os.path.join('resources','vert_trans.png')
+#            size: self.width, self.height*self.shadow_frac
+#            pos: self.x,self.y+self.height*(1-self.shadow_frac)
+
 Builder.load_string("""
-
-<UserListView>:
-    background_color: [1,1,1,1]
-    size_hint: 1,1
-    shadow_frac: 0.05
-    canvas:
-        Color:
-            rgba: 0.7,0.7,0.7,1
-        Rectangle:
-            source: os.path.join('resources','background.jpg')
-            size: self.size
-            pos: self.pos
-
-    canvas.after:
-        Color:
-            rgba: 1,1,1,1
-        Rectangle:
-            source: os.path.join('resources','vert_trans.png')
-            size: self.width, self.height*self.shadow_frac
-            pos: self.x,self.y+self.height*(1-self.shadow_frac)
 
 <-UserListEntry@BoxLayout>:
     orientation: "horizontal"
@@ -57,6 +58,7 @@ Builder.load_string("""
         Rectangle:
             size: self.size
             pos: self.pos
+    canvas.after:
         Color:
             rgba: 0,0,0,1
         Line:
@@ -150,7 +152,7 @@ class ProfileData(NetworkData):
             self.info = self.user_dict['info']
             self.name = self.user_dict['name']
             self.location = self.user_dict['location']
-            self.initialize()      
+            self.initialize()
 
 class ProfileView(Widget,ProfileData):
 
@@ -254,29 +256,28 @@ class ProfileButton(ButtonBehavior,Widget,ProfileData):
 
 
 
-    
-class UserListEntry(ButtonBehavior,BoxLayout,ProfileData):
-    
+
+class UserListEntry(ButtonBehavior,RecycleDataViewBehavior,BoxLayout,ProfileData):
+
     title_text = StringProperty('')
     img_source = StringProperty('')
     body_text = StringProperty('')
 
-    def __init__(self,project_id,**kwargs):
+    def __init__(self,**kwargs):
         super(UserListEntry,self).__init__(**kwargs)
-        self.primary_key = project_id
+        self.primary_key = kwargs.get('primary_key',self.primary_key)
 
     def add_button_icon(self,iconImage,callback,width=25):
         ic = Icon(source=iconImage,size_hint=(None,None),width=width)
         ic.bind(on_press = callback)
         self.ids['button_bar'].add_widget(ic)
         self.ids['button_bar'].width = width+5
-        
+
     def initialize(self,**kwargs):
-        print 'public feature init'
         self.img_source = self.images[-1]
         self.title_text = self.name
         self.body_text = self.info
-        
+
     def on_img_source(self,*args):
         self.ids['image'].source = self.img_source
 
@@ -285,30 +286,13 @@ class UserListEntry(ButtonBehavior,BoxLayout,ProfileData):
 
     def on_body_text(self,*args):
         self.ids['body'].text = self.body_text
-        
-class UserListView(Widget):
-    
-    userList = ListProperty(USERS)
-    
+
+class UserListView(NetworkListView):
+
     def __init__(self,**kwargs):
         super(UserListView,self).__init__(**kwargs)
-        self.layout = GridLayout(cols=1, spacing=3, size_hint_y=None)
-        self.layout.bind(minimum_height=self.layout.setter('height'))
+        self.viewclass = UserListEntry
 
-
-        for i,prj in enumerate(self.userList):
-            pw = UserListEntry(i+1)
-            pw.add_button_icon(RACK_ICON,hello)
-            self.layout.add_widget(pw)
-
-        self.scroll = ScrollView(size_hint=(1, None))
-        self.scroll.add_widget(self.layout)
-        self.add_widget(self.scroll)
-
-        self.bind(size=self.update_rect)
-
-    def update_rect(self,*args):
-        self.scroll.size = self.size      
 
 class ProfileMapIcon(AsyncMapMarker,ProfileData):
     effects = [HorizontalBlurEffect(size=1), VerticalBlurEffect(size=1), FXAAEffect()]

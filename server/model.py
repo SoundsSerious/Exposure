@@ -128,10 +128,40 @@ except ImportError as e:
     def __nomodule(*args, **kwargs): raise e
     inspect = __nomodule
     InstanceState = __nomodule
+ 
+###############################################################################
+#Many To Many
+###############################################################################
+   
+friendship = Table(
+    'user_friendship', Base.metadata,
+    Column('friend_a_id', Integer, ForeignKey('user.id'), primary_key=True),
+    Column('friend_b_id', Integer, ForeignKey('user.id'), primary_key=True),
+    Column('created_date',DateTime, default=datetime.utcnow)
+)
 
-###############################################################################
-#User Model
-###############################################################################
+membership = Table(
+    'project_membership', Base.metadata,
+    Column('project_id', Integer, ForeignKey('project.id'), primary_key=True),
+    Column('member_id', Integer, ForeignKey('user.id'), primary_key=True),
+    Column('created_date',DateTime, default=datetime.utcnow)
+)
+
+role_invites = Table(
+    'role_invites', Base.metadata,
+    Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True),
+    Column('invited_id', Integer, ForeignKey('user.id'), primary_key=True),
+    Column('created_date',DateTime, default=datetime.utcnow)
+)
+
+role_auditioning = Table(
+    'role_auditioning', Base.metadata,
+    Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True),
+    Column('actor_id', Integer, ForeignKey('user.id'), primary_key=True),
+    Column('created_date',DateTime, default=datetime.utcnow)
+)
+
+
 #Higher Levels Are Lower Use <
 SECURITY_MODES = dict(
             #Staffs / Wizards
@@ -149,12 +179,7 @@ SECURITY_MODES = dict(
             #Jerks
             kicked = 10)
 
-friendship = Table(
-    'user_friendship', Base.metadata,
-    Column('friend_a_id', Integer, ForeignKey('user.id'), primary_key=True),
-    Column('friend_b_id', Integer, ForeignKey('user.id'), primary_key=True),
-    Column('created_date',DateTime, default=datetime.utcnow)
-)
+
 
 class User(Base):
     """User model. Call Properties From Within Session Scope"""
@@ -172,8 +197,10 @@ class User(Base):
     #References
     pictures = image_attachment('UserPicture', uselist = True)
     locations = relationship('UserSpot', back_populates = 'user', order_by="UserSpot.created")
+    
     proj_owned = relationship('Project')
     staring_in = relationship("Role", back_populates="selected")
+    member_of = relationship('Project')
 
     @hybrid_property
     def current_location(self):
@@ -204,7 +231,8 @@ class User(Base):
             loc = self.current_location.latlong
         else:
             loc = None
-        info = dict(name = self.name,\
+        info = dict(pk = self.id,\
+                    name = self.name,\
                     info = self.info,\
                     location = loc,\
                     images = pictures,\
@@ -279,12 +307,7 @@ class UserPicture(Base, Image):
 #Project Model
 ###############################################################################
 
-membership = Table(
-    'project_membership', Base.metadata,
-    Column('project_id', Integer, ForeignKey('project.id'), primary_key=True),
-    Column('member_id', Integer, ForeignKey('user.id'), primary_key=True),
-    Column('created_date',DateTime, default=datetime.utcnow)
-)
+
 
 class Project(Base):
     __tablename__ = 'project'
@@ -308,7 +331,8 @@ class Project(Base):
             loc = self.current_location.latlong
         else:
             loc = None
-        info = dict(name = self.name,
+        info = dict(pk = self.id,\
+                    name = self.name,
                     info = self.info,
                     location = loc,
                     images = pictures,
@@ -321,13 +345,11 @@ class Project(Base):
     def current_location(self):
         if self.locations:
             return self.locations[-1]
-    #members = relationship('User',  secondary = membership,\
-    #                                backref =   backref('project_membership',lazy='dynamic'))
 
-    # this relationship is used for persistence
     members = relationship("User", secondary=membership,
                            primaryjoin = id==membership.c.project_id,
-                           secondaryjoin=User.id==membership.c.member_id)
+                           secondaryjoin=User.id==membership.c.member_id,
+                           back_populates = 'member_of')
 
 member_union = select([
                         membership.c.project_id,
@@ -385,19 +407,7 @@ class ProjectSpot(Base):
 ###############################################################################
 ROLE_MODES = dict( new = 0, casting = 1, auditioning = 2, selected = 3, archived = 4)
 
-role_invites = Table(
-    'role_invites', Base.metadata,
-    Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True),
-    Column('invited_id', Integer, ForeignKey('user.id'), primary_key=True),
-    Column('created_date',DateTime, default=datetime.utcnow)
-)
 
-role_auditioning = Table(
-    'role_auditioning', Base.metadata,
-    Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True),
-    Column('actor_id', Integer, ForeignKey('user.id'), primary_key=True),
-    Column('created_date',DateTime, default=datetime.utcnow)
-)
 
 class Role(Base):
     """Roles define the relationship between users and projects"""
