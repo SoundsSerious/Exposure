@@ -39,10 +39,14 @@ from menus import *
 from login import *
 from message import *
 from profiles import *
-from camera import *
+#from camera import *
 from social_interface import *
 
+
+
 iphone =  {'width':320 , 'height': 568}#320 x 568
+
+Loader.num_workers = 5
 
 SAMPLE_IMAGE = 'https://s-media-cache-ak0.pinimg.com/originals/ec/8e/8f/ec8e8f26ee298a6c852a7b7de37bd96b.jpg'
 DEFAULT_LOADING_IMAGE = os.path.join(EXP_PATH,'app','loading_apeture.png')
@@ -50,20 +54,26 @@ from kivy.loader import Loader
 loadingImage = Loader.image(DEFAULT_LOADING_IMAGE)
 
 class ProfileMenu(MenuBar):
-
+    
     def __init__(self,app,**kwargs):
         super(ProfileMenu,self).__init__(app,**kwargs)
         
         fref = weakref.ref(self.app.friends)
         pref = weakref.ref(self.app.projects)
         
-        for screen in ('overview','roles','projects','messages'):
-            if screen == 'overview':
-                self.addMenuScreenWidget(screen,UserListView(ref=fref),**but_opt)
-            elif screen == 'messages':
-                self.addMenuScreenWidget(screen,UserListView(ref=fref),**but_opt)
-            else:
-                self.addMenuScreenWidget(screen,ProjectListView(ref=pref),**but_opt)        
+        self.app.fbind('user_id',self.bind_profile_to_id)
+        
+        self.profile = DetailedProfileView()
+        self.messages = UserListView(ref=fref)    
+        self.roles =    UserListView(ref=fref)
+        self.projects = ProjectListView(ref=pref)
+        self.addMenuScreenWidget('overview',self.profile,**but_opt)
+        self.addMenuScreenWidget('roles',self.roles,**but_opt) 
+        self.addMenuScreenWidget('projects',self.projects,**but_opt)
+        self.addMenuScreenWidget('messages',self.messages,**but_opt)
+        
+    def bind_profile_to_id(self,inst,val):
+        self.profile.primary_key = val
 
 class ProjectsMenu(MenuBar):
     
@@ -73,10 +83,16 @@ class ProjectsMenu(MenuBar):
         fref = weakref.ref(self.app.friends)
         pref = weakref.ref(self.app.projects)
         
+        lpref = weakref.ref(self.app.local_projects)
+        
+        self.map = MapWidget(self)
+        self.local_proj_map_layer = ProjectMapView(maps = self.map,ref=lpref)  
+        
+        
         for screen in ('map','nearby','your projects','make'):
             print screen
             if screen == 'map':
-                self.addMenuScreenWidget(screen,MapWidget(self),**but_opt)
+                self.addMenuScreenWidget(screen,self.map,**but_opt)
             elif screen == 'your projects':
                 project_view = MenuTabSlider(self,size_hint=(1,1))
                 for _screen in ('overview','crew chat','crew list','auditions','edit'):
@@ -96,10 +112,15 @@ class CastingMenu(MenuBar):
         fref = weakref.ref(self.app.friends)
         pref = weakref.ref(self.app.projects)
         
+        lpref = weakref.ref(self.app.local_users)
+        
+        self.map = MapWidget(self)
+        self.local_user_map_layer = ProfileMapView(maps = self.map,ref=lpref)        
+        
         for screen in ('map','nearby','your roles','make'):
             print screen
             if screen == 'map':
-                self.addMenuScreenWidget(screen,MapWidget(self),**but_opt)
+                self.addMenuScreenWidget(screen,self.map,**but_opt)
             elif screen == 'nearby':
                 self.addMenuScreenWidget(screen,ProjectListView(ref=pref),**but_opt)
             elif screen == 'your roles':
@@ -119,9 +140,10 @@ class ExposureHomeWidget(SocialHomeWidget):
     app = None
     initialized = False
 
-    maps = ObjectProperty(None)
     profile = ObjectProperty(None)
-    chat = ObjectProperty(None)
+    projects = ObjectProperty(None)
+    casting = ObjectProperty(None)
+    camera = ObjectProperty(None)
 
     def __init__(self, app, **kwargs):
         self.touch_accept_width=50
@@ -134,7 +156,7 @@ class ExposureHomeWidget(SocialHomeWidget):
         self.profile = ProfileMenu(self.app)
         self.projects = ProjectsMenu(self.app)
         self.casting = CastingMenu(self.app)
-        self.camera = CameraWidget()
+        #self.camera = CameraWidget()
         
         self.addMenuScreenWidget('profile',CircularIcon(source=PROFILE_ICON,**icon_opt)\
                                                      ,self.profile,**font_opts)
@@ -142,8 +164,8 @@ class ExposureHomeWidget(SocialHomeWidget):
                                                     ,self.projects,**font_opts)
         self.addMenuScreenWidget('casting',CircularIcon(source=CASTING_ICON,**icon_opt)\
                                                     ,self.casting,**font_opts)
-        self.addMenuScreenWidget('camera',CircularIcon(source=CAMERA_ICON,**icon_opt)\
-                                                    ,self.camera,**font_opts)
+        #self.addMenuScreenWidget('camera',CircularIcon(source=CAMERA_ICON,**icon_opt)\
+        #                                            ,self.camera,**font_opts)
         self.addMenuScreenWidget('',RoundedButton(text='logout',**but_opt),Widget())
 
 
@@ -209,6 +231,7 @@ class ExposureApp(SocialApp):
         deffered.addCallback(self.get_user_info)
         deffered.addCallback(self.get_friends)
         deffered.addCallback(self.get_local_users)
+        deffered.addCallback(self.get_local_projects)
         deffered.addCallback(self.get_projects)
 
     def get_user_info(self, user_id=None):
@@ -234,10 +257,19 @@ class ExposureApp(SocialApp):
         '''Yeild Users From Server'''
         print 'get local users from {}'.format(self.user_id)
         if self.social_client and self.authenticated:
-            d = self.social_client.perspective.callRemote('nearby',100)
+            d = self.social_client.perspective.callRemote('nearby_users',100)
             return d.addCallback(self._cb_assignLocalUsers)
         else: #Shooting Blanks
             return []
+            
+    def get_local_projects(self, *args):
+        '''Yeild Users From Server'''
+        print 'get local users from {}'.format(self.user_id)
+        if self.social_client and self.authenticated:
+            d = self.social_client.perspective.callRemote('nearby_projects',100)
+            return d.addCallback(self._cb_assignLocalProjects)
+        else: #Shooting Blanks
+            return []            
 
     def get_friends(self, *args):
         '''Yeild Users From Server'''
@@ -269,6 +301,13 @@ class ExposureApp(SocialApp):
             self.local_users = localUsersResponse
             return self.local_users
         return []
+        
+    def _cb_assignLocalProjects(self,localProjectResponse):
+        print 'assigning local projects {}'.format( localProjectResponse )
+        if localProjectResponse:
+            self.local_projects = localProjectResponse
+            return self.local_projects
+        return []        
 
     def _cb_assignFriends(self,friendsList):
         print 'assigning friends {}'.format( friendsList )

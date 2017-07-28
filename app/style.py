@@ -143,9 +143,9 @@ Builder.load_string(
     canvas:
         Color:
             rgb: (1, 1, 1)
-        Rectangle:
-            size: self.exp_image_size
-            pos: self.center[0] - self.exp_image_size[0]/2.0,self.center[1] - self.exp_image_size[1]/2.0             
+        #Rectangle:
+        #    size: self.size
+        #    pos: self.center[0] - self.exp_image_size[0]/2.0,self.center[1] - self.exp_image_size[1]/2.0             
         StencilPush
         Rectangle:
             size: self.min_size
@@ -167,9 +167,9 @@ Builder.load_string(
     canvas:
         Color:
             rgb: (1, 1, 1)        
-        Rectangle:
-            size: self.exp_image_size
-            pos: self.center[0] - self.exp_image_size[0]/2.0,self.center[1] - self.exp_image_size[1]/2.0            
+        #Rectangle:
+        #    size: self.size
+        #    pos: self.center[0] - self.exp_image_size[0]/2.0,self.center[1] - self.exp_image_size[1]/2.0            
         StencilPush
         Rectangle:
             size: self.size
@@ -192,9 +192,9 @@ Builder.load_string(
     canvas:
         Color:
             rgb: (1, 1, 1)        
-        Rectangle:
-            size: self.exp_image_size
-            pos: self.center[0] - self.exp_image_size[0]/2.0,self.center[1] - self.exp_image_size[1]/2.0            
+        #Rectangle:
+        #    size: self.size
+        #    pos: self.center[0] - self.exp_image_size[0]/2.0,self.center[1] - self.exp_image_size[1]/2.0            
         StencilPush
         Rectangle:
             size: self.size
@@ -216,9 +216,9 @@ Builder.load_string(
     canvas:
         Color:
             rgb: (1, 1, 1)
-        Rectangle:
-            size: self.exp_image_size
-            pos: self.center[0] - self.exp_image_size[0]/2.0,self.center[1] - self.exp_image_size[1]/2.0             
+        #Rectangle:
+        #    size: self.exp_image_size
+        #    pos: self.center[0] - self.exp_image_size[0]/2.0,self.center[1] - self.exp_image_size[1]/2.0             
         StencilPush
         Rectangle:
             size: self.min_size

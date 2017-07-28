@@ -23,6 +23,7 @@ from style import *
 from maps import *
 from config import *
 from social_interface import *
+from projects import *
 
 path = EXP_PATH
 
@@ -47,7 +48,7 @@ path = EXP_PATH
 #            pos: self.x,self.y+self.height*(1-self.shadow_frac)
 
 Builder.load_string("""
-
+#:import config config
 <-UserListEntry@BoxLayout>:
     orientation: "horizontal"
     size_hint_y: None
@@ -101,6 +102,47 @@ Builder.load_string("""
         width: 25
         size_hint_x: None
 
+<DetailedProfileView>:
+    canvas:
+        Color:
+            rgba: (1, 1, 1, 1)
+        Rectangle:
+            size: self.size
+            pos: self.pos
+    ScrollView:
+        size_hint: (1,None)
+        size: root.size
+        GridLayout:
+            id:layout
+            cols: 1
+            spaceing: 3
+            size_hint_y: 1
+            size: root.size
+            Label:
+                color: 0,0,0,1
+                font_size: 20
+                font_name: os.path.join('fonts','Monument_Valley_1.2-Regular')
+                id: title
+                text: root.title_text.upper()
+                height: 30
+                size_hint_y: None
+            SquareExpandingWebImage:
+                id: image
+                source: root.img_source
+                height: 200
+                size_hint_y: None
+            Label:
+                id: body
+                color: 0,0,0,1
+                text: root.body_text
+                font_size: 10
+                height: self.texture_size[1]
+                size_hint_y: None
+                text_size: (self.width*0.9, None)
+                pos_hint: {'bottom':1}
+                halign: 'left'
+                valign: 'top'
+                font_name: 'fonts/Quicksand-Regular.otf'
 
 <-ProfileMapIcon>:
     size_hint: None, None
@@ -110,15 +152,17 @@ Builder.load_string("""
 
     canvas:
         Color:
-            rgb: 1,1,1
+            rgba: config.SECONDARY_COLOR
         Ellipse:
             pos: self.pos
             size: min(self.size),min(self.size)
         StencilPush
         Ellipse:
-            pos: self.pos[0]+1,self.pos[1]+1,
-            size: min(self.size)-2,min(self.size)-2
+            pos: self.pos[0]+1.5,self.pos[1]+1.5,
+            size: min(self.size)-3,min(self.size)-3
         StencilUse
+        Color:
+            rgba: 1,1,1,1        
         Rectangle:
             texture: self.texture
             pos: self.pos
@@ -126,7 +170,7 @@ Builder.load_string("""
         StencilUnUse
         Ellipse:
             pos: self.pos
-            size: min(self.size)-2,min(self.size)-2
+            size: min(self.size)-3,min(self.size)-3
         StencilPop
 """)
 
@@ -153,13 +197,37 @@ class ProfileData(NetworkData):
             self.name = self.user_dict['name']
             self.location = self.user_dict['location']
             self.initialize()
+            
+class DetailedProfileView(Widget,ProfileData):
+    title_text = StringProperty('')
+    img_source = StringProperty('')
+    body_text = StringProperty(LORN_IPSUM)
+
+    def __init__(self,**kwargs):
+        super(DetailedProfileView,self).__init__(**kwargs)
+        self.primary_key = kwargs.get('primary_key',self.primary_key)
+        self.ids['layout'].bind(minimum_height=self.ids['layout'].setter('height'))
+
+    def initialize(self,**kwargs):
+        self.img_source = self.images[0]
+        self.title_text = self.name
+        self.body_text = self.info
+
+    def on_img_source(self,*args):
+        print self.img_source
+        self.ids['image'].source = self.img_source
+
+    def on_title_text(self,*args):
+        self.ids['title'].text = self.title_text
+
+    def on_body_text(self,*args):
+        self.ids['body'].text = self.body_text            
 
 class ProfileView(Widget,ProfileData):
 
-    def __init__(self, user_id,**kwargs):
+    def __init__(self, **kwargs):
         super(ProfileView,self).__init__(**kwargs)
-        #Remote Call Server, Defer Creation Of Widgets
-        self.loadDataFromServer(user_id)
+        self.primary_key = kwargs.get('primary_key',self.primary_key)
 
     def initialize(self,*args):
 
@@ -294,21 +362,30 @@ class UserListView(NetworkListView):
         self.viewclass = UserListEntry
 
 
+
 class ProfileMapIcon(AsyncMapMarker,ProfileData):
-    effects = [HorizontalBlurEffect(size=1), VerticalBlurEffect(size=1), FXAAEffect()]
-    def __init__(self,maps,user_id,**kwargs):
-        super(ProfileMapIcon,self).__init__()
-        self.maps = maps
+    
+    maps = ObjectProperty(None)
+    layer = ObjectProperty(None)
 
-        d = self.loadDataFromServer(user_id)
-        d.addCallback(self.setData)
+    def __init__(self,**kwargs):
+        super(ProfileMapIcon,self).__init__(**kwargs)
+        self.maps = kwargs.get('maps',self.maps)
+        self.layer = kwargs.get('layer',self.layer)
+        self.primary_key = kwargs.get('primary_key',self.primary_key)
 
-    def setData(self,*args):
+    def initialize(self):
         self.source = self.images[-1]
         self.lat = self.location[0]
         self.lon = self.location[1]
         print 'adding at {},{}'.format(self.lat,self.lon)
-        self.maps.map.add_marker(self)
+        if self.maps:
+            self.maps.add_marker(self)
+        elif self.layer:
+            self.layer.add_widget(self)
+        
+class ProfileMapView(MapViewRecycleLayer):
+    icon_template = ObjectProperty(ProfileMapIcon)        
 
 class SwipingWidget(Widget):
 

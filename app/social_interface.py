@@ -66,7 +66,8 @@ Builder.load_string('''
         orientation: 'vertical'
 '''
 )
-class NetworkListView(RecycleView):
+
+class AbstractNetworkList(object):
     '''Holds Primary Keys, Reference To Other Property Can Be Used
 
     If Using ref, requires that you pass a refObj which is the EventDispatcher
@@ -81,7 +82,6 @@ class NetworkListView(RecycleView):
     is_reference = BooleanProperty(False)
 
     def __init__(self,**kwargs):
-        super(NetworkListView,self).__init__(**kwargs)
         self.bind( primary_keys = self.on_primary_keys)        
         
         self.primary_keys = kwargs.get('primary_keys',self.primary_keys)
@@ -108,9 +108,31 @@ class NetworkListView(RecycleView):
         self.primary_keys = val
 
     def on_primary_keys(self,inst,val):
+        pass
+
+class NetworkListView(RecycleView,AbstractNetworkList):
+    '''Holds Primary Keys, Reference To Other Property Can Be Used
+
+    If Using ref, requires that you pass a refObj which is the EventDispatcher
+    containing the property
+
+    If no refObj is passed, We'll assume the property is in the App Class'''
+
+    primary_keys = ListProperty(None)
+    ref = ObjectProperty(None)
+    refObj = ObjectProperty(None)
+    reference_prop = None
+    is_reference = BooleanProperty(False)
+
+    def __init__(self,**kwargs):
+        super(NetworkListView,self).__init__(**kwargs)
+        AbstractNetworkList.__init__(self,**kwargs)
+        self.bind( primary_keys = self.on_primary_keys)        
+
+    def on_primary_keys(self,inst,val):
         self.data = [{'primary_key': pk} for pk in self.primary_keys]
 
-class NetworkData:
+class NetworkData(object):
     '''Interface To Handle Getting Data From A Server'''
     primary_key = NumericProperty(None)
 

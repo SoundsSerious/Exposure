@@ -40,7 +40,7 @@ LORN_IPSUM = '''Lorem ipsum dolor sit amet, ut altera adipiscing reformidans his
 
 Builder.load_string('''
 #:import os os
-
+#:import config config
 <-ProjectListEntry@BoxLayout>:
     orientation: "horizontal"
     size_hint_y: None
@@ -172,7 +172,7 @@ Builder.load_string('''
                 valign: 'top'
                 font_name: 'fonts/Quicksand-Regular.otf'
 
-<DetailedPublicView>:
+<DetailedProjectView>:
     canvas:
         Color:
             rgba: (1, 1, 1, 1)
@@ -214,7 +214,7 @@ Builder.load_string('''
                 valign: 'top'
                 font_name: 'fonts/Quicksand-Regular.otf'
 
-<-ProfileMapIcon>:
+<-ProjectMapIcon>:
     size_hint: None, None
     source: root.source
     size: [20,20]
@@ -222,15 +222,18 @@ Builder.load_string('''
 
     canvas:
         Color:
-            rgb: 1,1,1
+            rgba: config.SECONDARY_COLOR
         Ellipse:
             pos: self.pos
             size: min(self.size),min(self.size)
         StencilPush
+        Color:
+            rgba: 1,1,1,1          
         Ellipse:
-            pos: self.pos[0]+1,self.pos[1]+1,
-            size: min(self.size)-2,min(self.size)-2
+            pos: self.pos[0]+1.5,self.pos[1]+1.5,
+            size: min(self.size)-3,min(self.size)-3
         StencilUse
+              
         Rectangle:
             texture: self.texture
             pos: self.pos
@@ -238,30 +241,11 @@ Builder.load_string('''
         StencilUnUse
         Ellipse:
             pos: self.pos
-            size: min(self.size)-2,min(self.size)-2
+            size: min(self.size)-3,min(self.size)-3
         StencilPop
 
             '''
 )
-#<ProjectListView>:
-#    background_color: [1,1,1,1]
-#    size_hint: 1,1
-#    shadow_frac: 0.05
-#    canvas:
-#        Color:
-#            rgba: 0.7,0.7,0.7,1
-#        Rectangle:
-#            source: os.path.join('resources','background.jpg')
-#            size: self.size
-#            pos: self.pos
-#    canvas.after:
-#        Color:
-#            rgba: 1,1,1,1
-#        Rectangle:
-#            source:os.path.join('resources','vert_trans.png')
-#            size: self.width, self.height*self.shadow_frac
-#            pos: self.x,self.y+self.height*(1-self.shadow_frac)
-#
 
 
 #Add This To Classes Later... Like Profile... Maybe Common Interface
@@ -290,18 +274,25 @@ class ProjectData(NetworkData):
             self.initialize()
 
 class ProjectMapIcon(AsyncMapMarker,ProjectData):
+    
+    maps = ObjectProperty(None)
+    layer = ObjectProperty(None)
 
-    def __init__(self,maps,project_id,**kwargs):
+    def __init__(self,**kwargs):
         super(ProjectMapIcon,self).__init__(**kwargs)
-        self.maps = maps
-        self.primary_key = project_id
+        self.maps = kwargs.get('maps',self.maps)
+        self.layer = kwargs.get('layer',self.layer)
+        self.primary_key = kwargs.get('primary_key',self.primary_key)
 
     def initialize(self):
         self.source = self.images[-1]
         self.lat = self.location[0]
         self.lon = self.location[1]
         print 'adding at {},{}'.format(self.lat,self.lon)
-        self.maps.map.add_marker(self)
+        if self.maps:
+            self.maps.add_marker(self)
+        elif self.layer:
+            self.layer.add_widget(self)
 
 class PublicMapView(DragBehavior,Widget,ProjectData):
     radius = ListProperty([20])
@@ -334,13 +325,13 @@ class PublicMapView(DragBehavior,Widget,ProjectData):
         self.ids['body'].text = self.body_text
 
 
-class DetailedPublicView(Widget,ProjectData):
+class DetailedProjectView(Widget,ProjectData):
     title_text = StringProperty('')
     img_source = StringProperty('')
     body_text = StringProperty(LORN_IPSUM)
 
     def __init__(self,**kwargs):
-        super(DetailedPublicView,self).__init__(**kwargs)
+        super(DetailedProjectView,self).__init__(**kwargs)
         self.primary_key = kwargs.get('primary_key',self.primary_key)
         self.ids['layout'].bind(minimum_height=self.ids['layout'].setter('height'))
 
@@ -396,20 +387,12 @@ class ProjectListView(NetworkListView):
         super(ProjectListView,self).__init__(**kwargs)
         self.viewclass = ProjectListEntry
 
-class ProjectsMapView(NetworkListView):
-    '''Container That Holds Primary Keys, To Update A Widgets On A Map'''
-    
-    def __init__(self,maps,**kwargs):
-        super(ProjectListView,self).__init__(**kwargs)
-        self.viewclass = functools.partial(ProjectMapIcon,maps=maps)
+class ProjectMapView(MapViewRecycleLayer):
+    icon_template = ObjectProperty(ProjectMapIcon)
 
 
 
-
-if __name__ == '__main__':
-    from kivy.support import install_twisted_reactor
-    install_twisted_reactor()    
-
+if __name__ == '__main__': 
     font_opts = dict(size_hint=(1,0.9),
                         color=(0,0,0,1),text_size=(100,None),\
                         valign='top',halign='center',
@@ -440,8 +423,10 @@ if __name__ == '__main__':
 #            lay.add_widget(FeatureListView())
 #            lay.add_widget( RoundedButton(text='Apply',**but_opt))
 #            mp = MapWidget(self)
-
-            return DetailedPublicView(2)
+#            #ml = ProjectsMapView(maps = mp.map,primary_keys = [1,3,5])            
+#            for i in [1,3,5]:
+#                ProjectMapIcon(mp,primary_key=i)
+            return #DetailedPublicView(2)
 
 
     PrjApp().run()

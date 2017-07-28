@@ -73,12 +73,19 @@ class Social_Interface(Avatar):
         self.log('PING From {}'.format(self.user))
         return 'PONG'
 
-    def perspective_nearby(self,distance=100):
+    def perspective_nearby_users(self,distance=100):
         print 'perspective nearby for {}'.format(self.user)
         if self.user:
-            d = self.db_get_nearby(distance)
+            d = self.db_get_nearby_users(distance)
             return d
         raise SocialException("No User Object")
+        
+    def perspective_nearby_projects(self,distance=100):
+        print 'perspective nearby for {}'.format(self.user)
+        if self.user:
+            d = self.db_get_nearby_projects(distance)
+            return d
+        raise SocialException("No User Object")        
 
     def perspective_friend_ids(self):
         print 'getting friend ids'
@@ -165,7 +172,7 @@ class Social_Interface(Avatar):
         return list([prj.id for prj in projects])        
 
     @ITwistedData.sqlalchemy_method
-    def db_get_nearby(self,session, miles = 100):
+    def db_get_nearby_users(self,session, miles = 100):
         print 'getting nearby from {}'.format(self.user)
         user = session.query(User).get(self.user.id)
         if user:
@@ -182,6 +189,25 @@ class Social_Interface(Avatar):
                 return vals
             else:
                 return []
+                
+    @ITwistedData.sqlalchemy_method
+    def db_get_nearby_projects(self,session, miles = 100):
+        print 'getting nearby from {}'.format(self.user)
+        user = session.query(User).get(self.user.id)
+        if user:
+            loc = user.current_location
+            if loc:
+                distance = miles * 0.014472
+                #1 mile = 0.014472 degrees
+                center_point = loc.pt_txt
+                print 'getting users within {} miles of {}'.format( distance, center_point)
+                projspot = session.query(Project).join(ProjectSpot, ProjectSpot.parent_id == Project.id).\
+                    filter(func.ST_DFullyWithin( ProjectSpot.geom,  center_point, distance))\
+                    .distinct(ProjectSpot.parent_id).all()
+                vals = tuple([usr.id for usr in projspot])
+                return vals
+            else:
+                return []                
 
     @ITwistedData.sqlalchemy_method
     def db_update(self, session):

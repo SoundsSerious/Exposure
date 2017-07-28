@@ -1,4 +1,4 @@
-from kivy.garden.mapview import MapView, MapMarker
+from kivy.garden.mapview import *
 from kivy.uix.widget import Widget
 from kivy.graphics import *
 from kivy.graphics.vertex_instructions import *
@@ -7,16 +7,18 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import *
 from kivy.uix.image import *
 from kivy.garden.androidtabs import *
-
-
-from config import *
-
 from kivy.core.window import Window
 from kivy.animation import Animation
 import copy
 from kivy.uix.widget import Widget
-from kivy.properties import (
-    ListProperty, NumericProperty, BooleanProperty, ObjectProperty)
+from kivy.properties import *
+
+from numpy import interp
+
+from config import *
+from social_interface import *
+
+
 
 
 class AsyncMapMarker(ButtonBehavior, AsyncImage):
@@ -52,6 +54,42 @@ class AsyncMapMarker(ButtonBehavior, AsyncImage):
         if self._layer:
             self._layer.remove_widget(self)
             self._layer = None
+
+class MapViewRecycleLayer(MarkerMapLayer,AbstractNetworkList):
+    '''Container To Hold Primary Keys, And Update A Map Layer'''
+    maps = ObjectProperty(None)
+    icon_template = ObjectProperty(AsyncMapMarker)
+
+    icon_zfull,icon_zfull_side = 16,80
+    icon_zmin,icon_zmin_side = 11,30
+
+    def __init__(self,maps,**kwargs):
+        self.maps = maps
+        self.icon_template = kwargs.get('template',self.icon_template)
+
+        super(MapViewRecycleLayer,self).__init__(**kwargs)
+        AbstractNetworkList.__init__(self,**kwargs)
+
+        self.maps.map.add_layer(self)
+
+    def reposition(self):
+        if self.markers:
+            super(MapViewRecycleLayer,self).reposition()
+            side = interp(  self.maps.map.zoom,\
+                            [self.icon_zmin,self.icon_zfull],\
+                            [self.icon_zmin_side,self.icon_zfull_side])
+            size = (side,side)
+            for marker in self.markers:
+                anim = Animation(size=size,duration= 0.25,t='out_quad')
+                anim.start(marker)
+
+
+    def on_primary_keys(self,inst,val):
+        for mrk in self.markers:
+            self.remove_widget(mrk)
+        self.markers = []
+        for i in val:
+            self.icon_template(layer = self,primary_key=i)
 
 class DragNDropWidget(Widget):
     # let kivy take care of kwargs and get signals for free by using
@@ -370,7 +408,7 @@ class MapWidget(Widget):
 
         self._map = MapView(zoom=zoom, lat=lat, lon=lon,size_hint=(1,1))
         self._map.background_color = [0/255.,0/255.,0/255.,1]
-        self._map.map_source = 'darkmap'
+        self._map.map_source = 'dark matter'
 
         self._shoot = ShootWidget(map = self._map,inital_pos=(self.width/2-self._shoot_btn_height\
                                                 ,self._shoot_btn_height*1.5) )
